@@ -17,6 +17,7 @@ struct approvalApp: App {
                 .environmentObject(PendingStore.shared)
                 .environmentObject(ApprovalCoordinator.shared)
                 .environmentObject(ApprovalServer.shared)
+                .environmentObject(LogStore.shared)
         }
     }
 }

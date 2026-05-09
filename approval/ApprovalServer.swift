@@ -166,6 +166,18 @@ final class ApprovalServer: ObservableObject {
             reason: detailReason
         )
 
+        LogStore.shared.append(LogEntry(
+            id: id,
+            timestamp: Date(),
+            command: req.command,
+            source: req.source ?? "Claude Code",
+            cwd: req.cwd,
+            ruleName: matched.name,
+            rulePattern: matched.pattern,
+            decision: .pending,
+            resolvedAt: nil
+        ))
+
         PendingStore.shared.add(cmd) { [weak self] approved in
             let respJson = "{\"approved\":\(approved ? "true" : "false"),\"reason\":\"\(approved ? "user approved" : "user denied")\"}"
             self?.sendResponse(conn: conn, status: 200, body: respJson, contentType: "application/json")

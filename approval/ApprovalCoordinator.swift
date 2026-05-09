@@ -98,6 +98,7 @@ final class ApprovalCoordinator: NSObject, ObservableObject {
     func resolve(id: String, approved: Bool) {
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [id])
         PendingStore.shared.resolve(id: id, approved: approved)
+        LogStore.shared.updateDecision(id: id, decision: approved ? .approved : .denied)
         if let w = detailWindows[id] {
             detailWindows.removeValue(forKey: id)
             w.close()

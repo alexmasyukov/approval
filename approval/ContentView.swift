@@ -9,6 +9,7 @@ import AppKit
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
     case status = "Статус"
+    case log = "Лог"
     case general = "Общие"
     case rules = "Правила"
 
@@ -17,6 +18,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     var icon: String {
         switch self {
         case .status:  return "shield.lefthalf.filled"
+        case .log:     return "list.bullet.clipboard"
         case .general: return "gearshape"
         case .rules:   return "list.bullet.rectangle"
         }
@@ -40,6 +42,7 @@ struct ContentView: View {
             Group {
                 switch selection ?? .status {
                 case .status:  StatusView()
+                case .log:     LogView()
                 case .general: GeneralSettingsView()
                 case .rules:   RulesView()
                 }
@@ -114,28 +117,7 @@ struct StatusView: View {
                 }
             }
 
-            Section("Активные запросы (\(pending.pending.count))") {
-                if pending.pending.isEmpty {
-                    Text("нет").foregroundStyle(.secondary)
-                } else {
-                    ForEach(pending.pending) { cmd in
-                        HStack {
-                            Text(cmd.command)
-                                .font(.system(.body, design: .monospaced))
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                            Spacer()
-                            Button("Открыть") {
-                                coordinator.openDetailWindow(for: cmd)
-                            }
-                            .controlSize(.small)
-                        }
-                    }
-                }
-            }
-
             Section("Тест") {
-                LabeledContent("Последний ответ", value: coordinator.lastResult)
                 Button("Тест: DROP TABLE users") {
                     fireLocal(command: "DROP TABLE users; DROP TABLE orders;")
                 }
@@ -153,11 +135,9 @@ struct StatusView: View {
 
     private func fireLocal(command: String) {
         if store.config.mode == .passThrough {
-            coordinator.lastResult = "Pass-through — пропущено без вопроса"
             return
         }
         guard let matched = store.evaluate(command: command) else {
-            coordinator.lastResult = "Совпадений нет — пропущено"
             return
         }
         let id = UUID().uuidString
@@ -168,10 +148,19 @@ struct StatusView: View {
             reason: """
             Совпадение с правилом: \(matched.name)
             Паттерн: \(matched.pattern)
-
-            Рабочая директория: /Users/alex/my-pro/myapp
             """
         )
+        LogStore.shared.append(LogEntry(
+            id: id,
+            timestamp: Date(),
+            command: command,
+            source: "Test trigger (in-app)",
+            cwd: nil,
+            ruleName: matched.name,
+            rulePattern: matched.pattern,
+            decision: .pending,
+            resolvedAt: nil
+        ))
         PendingStore.shared.add(cmd) { _ in }
         coordinator.requestApproval(for: cmd)
     }

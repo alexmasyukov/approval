@@ -15,7 +15,7 @@ struct GeneralSettingsView: View {
                 Text(verboseNotifications
                      ? "Полный заголовок и описание в системном уведомлении."
                      : "Минимальный заголовок и короткое тело.")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
             }
 
