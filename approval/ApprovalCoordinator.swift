@@ -65,9 +65,16 @@ final class ApprovalCoordinator: NSObject, ObservableObject {
     }
 
     private func sendNotification(for cmd: PendingCommand) {
+        let verbose = UserDefaults.standard.object(forKey: "verboseNotifications") as? Bool ?? true
+
         let content = UNMutableNotificationContent()
-        content.title = "⚠️ Запрос на подтверждение опасной команды"
-        content.body = "Claude Code хочет выполнить деструктивную операцию. Откройте оповещение, чтобы посмотреть детали и подтвердить или отменить."
+        if verbose {
+            content.title = "⚠️ Запрос на подтверждение опасной команды"
+            content.body = "Claude Code хочет выполнить деструктивную операцию. Откройте оповещение, чтобы посмотреть детали и подтвердить или отменить."
+        } else {
+            content.title = "Approval"
+            content.body = "Требуется подтверждение"
+        }
         content.categoryIdentifier = "COMMAND_APPROVAL"
         content.sound = .default
         content.interruptionLevel = .timeSensitive

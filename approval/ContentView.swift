@@ -7,154 +7,151 @@ import SwiftUI
 import UserNotifications
 import AppKit
 
+enum AppSection: String, CaseIterable, Identifiable, Hashable {
+    case status = "Статус"
+    case general = "Общие"
+    case rules = "Правила"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .status:  return "shield.lefthalf.filled"
+        case .general: return "gearshape"
+        case .rules:   return "list.bullet.rectangle"
+        }
+    }
+}
+
 struct ContentView: View {
+    @EnvironmentObject var coordinator: ApprovalCoordinator
+
+    @State private var selection: AppSection? = .status
+
+    var body: some View {
+        NavigationSplitView {
+            List(AppSection.allCases, id: \.self, selection: $selection) { section in
+                Label(section.rawValue, systemImage: section.icon)
+            }
+            .listStyle(.sidebar)
+            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
+            .navigationTitle("approval")
+        } detail: {
+            Group {
+                switch selection ?? .status {
+                case .status:  StatusView()
+                case .general: GeneralSettingsView()
+                case .rules:   RulesView()
+                }
+            }
+            .navigationSplitViewColumnWidth(min: 520, ideal: 720)
+        }
+        .frame(minWidth: 820, minHeight: 560)
+        .onAppear {
+            coordinator.refreshAuthStatus()
+        }
+    }
+}
+
+struct StatusView: View {
     @EnvironmentObject var coordinator: ApprovalCoordinator
     @EnvironmentObject var server: ApprovalServer
     @EnvironmentObject var pending: PendingStore
     @EnvironmentObject var store: RulesStore
 
     var body: some View {
-        TabView {
-            mainTab
-                .tabItem { Label("Статус", systemImage: "shield.lefthalf.filled") }
-            RulesView()
-                .tabItem { Label("Правила", systemImage: "list.bullet.rectangle") }
-        }
-        .frame(minWidth: 720, minHeight: 520)
-        .onAppear {
-            coordinator.refreshAuthStatus()
-        }
-    }
-
-    private var mainTab: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Approval").font(.largeTitle).bold()
-
-            statusBlock
-            modeBlock
-
-            Divider()
-
-            pendingBlock
-
-            Divider()
-
-            testBlock
-
-            Spacer()
-        }
-        .padding(20)
-    }
-
-    private var statusBlock: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Circle()
-                    .fill(server.isRunning ? Color.green : Color.red)
-                    .frame(width: 10, height: 10)
-                Text("Сервер: ").bold()
-                Text(server.isRunning ? "слушает на http://localhost:\(server.port)" : "не запущен")
-                    .font(.system(.body, design: .monospaced))
-            }
-
-            HStack {
-                Text("Notifications: ").bold()
-                Text(coordinator.authStatus)
-                Button("Обновить") { coordinator.refreshAuthStatus() }
-                    .controlSize(.small)
-                Button("Настройки уведомлений") { coordinator.openNotificationSettings() }
-                    .controlSize(.small)
-            }
-
-            HStack {
-                Text("Последний ответ: ").bold()
-                Text(coordinator.lastResult).foregroundStyle(.secondary)
-            }
-
-            if !coordinator.lastError.isEmpty {
-                Text(coordinator.lastError)
-                    .foregroundStyle(.red)
-                    .font(.callout)
-            }
-            if !server.lastError.isEmpty {
-                Text(server.lastError)
-                    .foregroundStyle(.red)
-                    .font(.callout)
-            }
-        }
-    }
-
-    private var modeBlock: some View {
-        HStack {
-            Text("Режим:").bold()
-            Picker("", selection: Binding(
-                get: { store.config.mode },
-                set: { store.setMode($0) }
-            )) {
-                ForEach(AppMode.allCases) { m in
-                    Text(m.label).tag(m)
-                }
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 280)
-            .labelsHidden()
-
-            if store.config.mode == .passThrough {
-                Label("Все команды пропускаются!", systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.red)
-                    .bold()
-            }
-        }
-    }
-
-    private var pendingBlock: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Активные запросы (\(pending.pending.count))").font(.headline)
-            if pending.pending.isEmpty {
-                Text("нет").foregroundStyle(.secondary)
-            } else {
-                ForEach(pending.pending) { cmd in
-                    HStack {
-                        Text(cmd.command)
-                            .font(.system(.body, design: .monospaced))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                        Spacer()
-                        Button("Открыть") { coordinator.openDetailWindow(for: cmd) }
-                            .controlSize(.small)
+        Form {
+            Section("Сервер") {
+                LabeledContent("Состояние") {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(server.isRunning ? Color.green : Color.red)
+                            .frame(width: 10, height: 10)
+                        Text(server.isRunning ? "слушает" : "не запущен")
                     }
-                    .padding(8)
-                    .background(Color.yellow.opacity(0.12))
-                    .cornerRadius(6)
+                }
+                if server.isRunning {
+                    LabeledContent("Адрес") {
+                        Text("http://localhost:\(server.port)")
+                            .font(.system(.body, design: .monospaced))
+                            .textSelection(.enabled)
+                    }
+                }
+                if !server.lastError.isEmpty {
+                    Text(server.lastError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
                 }
             }
-        }
-    }
 
-    private var testBlock: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Тест").font(.headline)
-            HStack {
+            Section("Уведомления") {
+                LabeledContent("Статус", value: coordinator.authStatus)
+                Button("Обновить статус") { coordinator.refreshAuthStatus() }
+                Button("Открыть настройки уведомлений") { coordinator.openNotificationSettings() }
+                if !coordinator.lastError.isEmpty {
+                    Text(coordinator.lastError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+            }
+
+            Section("Режим работы") {
+                Picker("Режим", selection: Binding(
+                    get: { store.config.mode },
+                    set: { store.setMode($0) }
+                )) {
+                    ForEach(AppMode.allCases) { m in
+                        Text(m.label).tag(m)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+
+                if store.config.mode == .passThrough {
+                    Label("Все команды проходят без проверки", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                        .font(.callout.bold())
+                }
+            }
+
+            Section("Активные запросы (\(pending.pending.count))") {
+                if pending.pending.isEmpty {
+                    Text("нет").foregroundStyle(.secondary)
+                } else {
+                    ForEach(pending.pending) { cmd in
+                        HStack {
+                            Text(cmd.command)
+                                .font(.system(.body, design: .monospaced))
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                            Spacer()
+                            Button("Открыть") {
+                                coordinator.openDetailWindow(for: cmd)
+                            }
+                            .controlSize(.small)
+                        }
+                    }
+                }
+            }
+
+            Section("Тест") {
+                LabeledContent("Последний ответ", value: coordinator.lastResult)
                 Button("Тест: DROP TABLE users") {
-                    fireLocal(command: "DROP TABLE users; DROP TABLE orders;",
-                              source: "Test trigger (in-app)",
-                              cwd: "/Users/alex/my-pro/myapp")
+                    fireLocal(command: "DROP TABLE users; DROP TABLE orders;")
                 }
                 Button("Тест: rm -rf /tmp/foo") {
-                    fireLocal(command: "rm -rf /tmp/foo",
-                              source: "Test trigger (in-app)",
-                              cwd: "/Users/alex/my-pro/myapp")
+                    fireLocal(command: "rm -rf /tmp/foo")
                 }
                 Button("Тест: SELECT (безопасно)") {
-                    fireLocal(command: "SELECT * FROM users LIMIT 10",
-                              source: "Test trigger (in-app)",
-                              cwd: "/Users/alex/my-pro/myapp")
+                    fireLocal(command: "SELECT * FROM users LIMIT 10")
                 }
             }
         }
+        .formStyle(.grouped)
+        .navigationTitle("Статус")
     }
 
-    private func fireLocal(command: String, source: String, cwd: String) {
+    private func fireLocal(command: String) {
         if store.config.mode == .passThrough {
             coordinator.lastResult = "Pass-through — пропущено без вопроса"
             return
@@ -166,18 +163,16 @@ struct ContentView: View {
         let id = UUID().uuidString
         let cmd = PendingCommand(
             id: id,
-            source: source,
+            source: "Test trigger (in-app)",
             command: command,
             reason: """
             Совпадение с правилом: \(matched.name)
             Паттерн: \(matched.pattern)
 
-            Рабочая директория: \(cwd)
+            Рабочая директория: /Users/alex/my-pro/myapp
             """
         )
-        PendingStore.shared.add(cmd) { _ in
-            // result already updated via coordinator.resolve → lastResult
-        }
+        PendingStore.shared.add(cmd) { _ in }
         coordinator.requestApproval(for: cmd)
     }
 }
