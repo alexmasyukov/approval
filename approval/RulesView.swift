@@ -14,25 +14,6 @@ struct RulesView: View {
 
     var body: some View {
         Form {
-            Section("Режим") {
-                Picker("Режим", selection: Binding(
-                    get: { store.config.mode },
-                    set: { store.setMode($0) }
-                )) {
-                    ForEach(AppMode.allCases) { m in
-                        Text(m.label).tag(m)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-
-                if store.config.mode == .passThrough {
-                    Label("Пропускаются все команды без проверки", systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
-                        .font(.callout.bold())
-                }
-            }
-
             Section("Правила (\(store.config.rules.count))") {
                 ForEach(store.config.rules) { rule in
                     ruleRow(rule)

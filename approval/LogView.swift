@@ -4,16 +4,18 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct LogView: View {
     @EnvironmentObject var log: LogStore
+    @State private var showClearConfirm = false
 
     var body: some View {
         Form {
             Section("Информация") {
                 LabeledContent("Записей", value: "\(log.entries.count) / 100")
                 Button(role: .destructive) {
-                    log.clear()
+                    showClearConfirm = true
                 } label: {
                     Text("Очистить лог")
                 }
@@ -33,14 +35,28 @@ struct LogView: View {
             }
 
             Section("Файл") {
-                Text(log.logFilePath)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
+                LabeledContent("Путь") {
+                    Text(log.logFilePath)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+                Button("Открыть папку") {
+                    let url = URL(fileURLWithPath: log.logFilePath)
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                }
             }
         }
         .formStyle(.grouped)
         .navigationTitle("Лог")
+        .confirmationDialog("Очистить лог?", isPresented: $showClearConfirm, titleVisibility: .visible) {
+            Button("Очистить", role: .destructive) {
+                log.clear()
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("Все \(log.entries.count) записей будут удалены без возможности восстановления.")
+        }
     }
 
     @ViewBuilder
@@ -87,7 +103,7 @@ struct LogView: View {
         let (color, symbol) = badgeStyle(for: decision)
         Label(decision.label, systemImage: symbol)
             .labelStyle(.titleAndIcon)
-            .font(.caption.bold())
+            .font(.callout.bold())
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .foregroundStyle(color)

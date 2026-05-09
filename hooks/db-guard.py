@@ -10,12 +10,28 @@ exit 2 — заблокировать (Claude Code увидит сообщени
 """
 
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
 
-APPROVAL_URL = "http://localhost:47823/check"
+DEFAULT_PORT = 47823
+PORT_FILE = os.path.expanduser(
+    "~/Library/Application Support/approval/port"
+)
 TIMEOUT_SECONDS = 600  # 10 минут — должно совпадать с timeout в settings.json
+
+
+def _resolve_port() -> int:
+    """Читает текущий порт approval-сервера из файла, иначе дефолт."""
+    try:
+        with open(PORT_FILE, encoding="utf-8") as f:
+            return int(f.read().strip())
+    except (OSError, ValueError):
+        return DEFAULT_PORT
+
+
+APPROVAL_URL = f"http://localhost:{_resolve_port()}/check"
 
 
 def main() -> None:

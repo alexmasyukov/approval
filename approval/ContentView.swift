@@ -10,8 +10,8 @@ import AppKit
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
     case status = "Статус"
     case log = "Лог"
-    case general = "Общие"
     case rules = "Правила"
+    case general = "Настройки"
 
     var id: String { rawValue }
 
@@ -19,8 +19,8 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .status:  return "shield.lefthalf.filled"
         case .log:     return "list.bullet.clipboard"
-        case .general: return "gearshape"
         case .rules:   return "list.bullet.rectangle"
+        case .general: return "gearshape"
         }
     }
 }
@@ -62,6 +62,10 @@ struct StatusView: View {
     @EnvironmentObject var pending: PendingStore
     @EnvironmentObject var store: RulesStore
 
+    @State private var showPortAlert = false
+    @State private var portInput: String = ""
+    @State private var portError: String = ""
+
     var body: some View {
         Form {
             Section("Сервер") {
@@ -75,14 +79,19 @@ struct StatusView: View {
                 }
                 if server.isRunning {
                     LabeledContent("Адрес") {
-                        Text("http://localhost:\(server.port)")
+                        Text(verbatim: "http://localhost:\(server.port)")
                             .font(.system(.body, design: .monospaced))
                             .textSelection(.enabled)
                     }
                 }
+                Button("Изменить порт") {
+                    portInput = "\(server.port)"
+                    portError = ""
+                    showPortAlert = true
+                }
                 if !server.lastError.isEmpty {
                     Text(server.lastError)
-                        .font(.caption)
+                        .font(.callout)
                         .foregroundStyle(.red)
                 }
             }
@@ -131,6 +140,26 @@ struct StatusView: View {
         }
         .formStyle(.grouped)
         .navigationTitle("Статус")
+        .alert("Изменить порт сервера", isPresented: $showPortAlert) {
+            TextField("Порт (1-65535)", text: $portInput)
+            Button("Применить") {
+                applyPortChange()
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("После изменения сервер перезапустится. Hook читает текущий порт из ~/Library/Application Support/approval/port — обновится автоматически.\(portError.isEmpty ? "" : "\n\n\(portError)")")
+        }
+    }
+
+    private func applyPortChange() {
+        let trimmed = portInput.trimmingCharacters(in: .whitespaces)
+        guard let p = Int(trimmed), p > 0, p <= 65535 else {
+            portError = "Введите число от 1 до 65535"
+            showPortAlert = true
+            return
+        }
+        portError = ""
+        server.setPort(UInt16(p))
     }
 
     private func fireLocal(command: String) {

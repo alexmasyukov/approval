@@ -13,9 +13,31 @@ final class ApprovalServer: ObservableObject {
 
     @Published private(set) var isRunning: Bool = false
     @Published private(set) var lastError: String = ""
-    let port: UInt16 = 47823
+    @Published private(set) var port: UInt16
 
+    static let defaultPort: UInt16 = 47823
     private var listener: NWListener?
+
+    init() {
+        let saved = UserDefaults.standard.integer(forKey: "serverPort")
+        self.port = (saved > 0 && saved <= 65535) ? UInt16(saved) : Self.defaultPort
+    }
+
+    func setPort(_ newPort: UInt16) {
+        guard newPort != port, newPort > 0 else { return }
+        stop()
+        port = newPort
+        UserDefaults.standard.set(Int(newPort), forKey: "serverPort")
+        start()
+    }
+
+    private func writePortFile() {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let dir = appSupport.appendingPathComponent("approval", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let file = dir.appendingPathComponent("port")
+        try? "\(port)\n".write(to: file, atomically: true, encoding: .utf8)
+    }
 
     func start() {
         guard listener == nil else { return }
@@ -23,6 +45,7 @@ final class ApprovalServer: ObservableObject {
             let params = NWParameters.tcp
             params.allowLocalEndpointReuse = true
             let l = try NWListener(using: params, on: NWEndpoint.Port(rawValue: port)!)
+            writePortFile()
             l.newConnectionHandler = { [weak self] conn in
                 Task { @MainActor in
                     self?.handle(connection: conn)
