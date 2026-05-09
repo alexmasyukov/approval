@@ -96,17 +96,6 @@ struct StatusView: View {
                 }
             }
 
-            Section("Уведомления") {
-                LabeledContent("Статус", value: coordinator.authStatus)
-                Button("Обновить статус") { coordinator.refreshAuthStatus() }
-                Button("Открыть настройки уведомлений") { coordinator.openNotificationSettings() }
-                if !coordinator.lastError.isEmpty {
-                    Text(coordinator.lastError)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                }
-            }
-
             Section("Режим работы") {
                 Picker("Режим", selection: Binding(
                     get: { store.config.mode },
@@ -123,6 +112,17 @@ struct StatusView: View {
                     Label("Все команды проходят без проверки", systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(.red)
                         .font(.callout.bold())
+                }
+            }
+
+            Section("Уведомления") {
+                LabeledContent("Статус", value: coordinator.authStatus)
+                Button("Обновить статус") { coordinator.refreshAuthStatus() }
+                Button("Открыть настройки уведомлений") { coordinator.openNotificationSettings() }
+                if !coordinator.lastError.isEmpty {
+                    Text(coordinator.lastError)
+                        .font(.callout)
+                        .foregroundStyle(.red)
                 }
             }
 
@@ -147,7 +147,7 @@ struct StatusView: View {
             }
             Button("Отмена", role: .cancel) {}
         } message: {
-            Text("После изменения сервер перезапустится. Hook читает текущий порт из ~/Library/Application Support/approval/port — обновится автоматически.\(portError.isEmpty ? "" : "\n\n\(portError)")")
+            Text("Сервер перезапустится на новом порту.\(portError.isEmpty ? "" : "\n\n\(portError)")")
         }
     }
 
