@@ -1,0 +1,8 @@
+// Скопируй этот файл в Local.xcconfig и заполни своим Apple Developer Team ID.
+//
+//   cp Local.xcconfig.example Local.xcconfig
+//
+// Team ID можно посмотреть в Xcode → Settings → Accounts → Manage Certificates,
+// или на developer.apple.com/account → Membership.
+
+DEVELOPMENT_TEAM = YOUR_TEAM_ID
