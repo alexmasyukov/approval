@@ -86,6 +86,9 @@ credentials.*
 *.local.xcconfig
 Local.xcconfig
 
+# ----- Docker / тестовая БД -----
+db-data/
+
 # ----- Claude Code (локальные хуки/настройки с абсолютными путями) -----
 .claude/
 
