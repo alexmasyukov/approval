@@ -11,7 +11,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     case status = "Статус"
     case log = "Лог"
     case rules = "Правила"
-    case install = "Установка"
+    case install = "Установка хука"
     case general = "Настройки"
 
     var id: String { rawValue }

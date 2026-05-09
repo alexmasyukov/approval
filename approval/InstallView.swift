@@ -44,7 +44,7 @@ struct InstallView: View {
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .navigationTitle("Установка")
+        .navigationTitle("Установка хука")
         .onAppear { load() }
         .onChange(of: server.port) { _, _ in load() }
     }

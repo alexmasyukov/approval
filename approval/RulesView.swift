@@ -103,38 +103,56 @@ struct AddRuleSheet: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("Новое правило")
-                    .font(.headline)
+                    .font(.title3)
+                    .bold()
                 Spacer()
             }
-            .padding(20)
+            .padding(.horizontal, 24)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
 
             Divider()
 
-            Form {
-                Section {
-                    LabeledContent("Название") {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    formField(label: "Название") {
                         TextField("Например: DROP TABLE", text: $name)
+                            .textFieldStyle(.roundedBorder)
+                            .controlSize(.large)
                     }
-                    LabeledContent("Regex") {
-                        TextField("DROP\\s+TABLE", text: $pattern)
-                            .font(.system(.body, design: .monospaced))
-                    }
-                } footer: {
-                    Text("Шаблон будет проверяться на команде регулярным выражением (case-insensitive). При совпадении приложение запросит подтверждение.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
 
-                if !error.isEmpty {
-                    Section {
+                    formField(label: "Regex") {
+                        VStack(alignment: .leading, spacing: 6) {
+                            TextEditor(text: $pattern)
+                                .font(.system(.body, design: .monospaced))
+                                .frame(minHeight: 120)
+                                .padding(6)
+                                .background(Color(NSColor.textBackgroundColor))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(Color.gray.opacity(0.4), lineWidth: 1)
+                                )
+                                .cornerRadius(6)
+
+                            Text("Шаблон проверяется регулярным выражением (case-insensitive). При совпадении с командой будет запрошено подтверждение.")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
+                    if !error.isEmpty {
                         Text(error)
                             .foregroundStyle(.red)
                             .font(.callout)
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(6)
                     }
                 }
+                .padding(24)
             }
-            .formStyle(.grouped)
-            .frame(minHeight: 220)
 
             Divider()
 
@@ -147,19 +165,37 @@ struct AddRuleSheet: View {
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
-                .disabled(name.isEmpty || pattern.isEmpty)
+                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty
+                          || pattern.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            .padding(20)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
         }
-        .frame(minWidth: 520, minHeight: 360)
+        .frame(minWidth: 560, minHeight: 440)
+    }
+
+    @ViewBuilder
+    private func formField<Content: View>(label: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            content()
+        }
     }
 
     private func submit() {
-        guard (try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive])) != nil else {
+        let trimmedPattern = pattern.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (try? NSRegularExpression(pattern: trimmedPattern, options: [.caseInsensitive])) != nil else {
             error = "Невалидный regex"
             return
         }
         error = ""
-        onAdd(Rule(name: name, pattern: pattern, enabled: true, builtin: false))
+        onAdd(Rule(
+            name: name.trimmingCharacters(in: .whitespaces),
+            pattern: trimmedPattern,
+            enabled: true,
+            builtin: false
+        ))
     }
 }
