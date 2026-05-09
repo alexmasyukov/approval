@@ -11,6 +11,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     case status = "Статус"
     case log = "Лог"
     case rules = "Правила"
+    case install = "Установка"
     case general = "Настройки"
 
     var id: String { rawValue }
@@ -20,6 +21,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .status:  return "shield.lefthalf.filled"
         case .log:     return "list.bullet.clipboard"
         case .rules:   return "list.bullet.rectangle"
+        case .install: return "arrow.down.app"
         case .general: return "gearshape"
         }
     }
@@ -43,8 +45,9 @@ struct ContentView: View {
                 switch selection ?? .status {
                 case .status:  StatusView()
                 case .log:     LogView()
-                case .general: GeneralSettingsView()
                 case .rules:   RulesView()
+                case .install: InstallView()
+                case .general: GeneralSettingsView()
                 }
             }
             .navigationSplitViewColumnWidth(min: 520, ideal: 720)
