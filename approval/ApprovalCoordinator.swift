@@ -7,6 +7,7 @@ import Foundation
 import UserNotifications
 import AppKit
 import SwiftUI
+import Combine
 
 @MainActor
 final class ApprovalCoordinator: NSObject, ObservableObject {
