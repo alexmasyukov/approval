@@ -6,7 +6,6 @@
 import SwiftUI
 import AppKit
 
-@main
 struct approvalApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
