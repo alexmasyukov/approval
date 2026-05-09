@@ -35,6 +35,6 @@ struct GeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle("Общие")
+        .navigationTitle("Настройки")
     }
 }
