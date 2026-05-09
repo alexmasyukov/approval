@@ -4,13 +4,12 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct RulesView: View {
     @EnvironmentObject var store: RulesStore
 
-    @State private var newName: String = ""
-    @State private var newPattern: String = ""
-    @State private var addError: String = ""
+    @State private var showAddSheet = false
 
     var body: some View {
         Form {
@@ -18,30 +17,37 @@ struct RulesView: View {
                 ForEach(store.config.rules) { rule in
                     ruleRow(rule)
                 }
-            }
 
-            Section("Добавить правило") {
-                TextField("Название", text: $newName)
-                TextField("Regex (например: DROP\\s+TABLE)", text: $newPattern)
-                    .font(.system(.body, design: .monospaced))
-                if !addError.isEmpty {
-                    Text(addError)
-                        .font(.caption)
-                        .foregroundStyle(.red)
+                Button {
+                    showAddSheet = true
+                } label: {
+                    Label("Добавить правило", systemImage: "plus")
                 }
-                Button("Добавить") { addRule() }
-                    .disabled(newName.isEmpty || newPattern.isEmpty)
             }
 
             Section("Файл с правилами") {
                 Text(store.rulesFilePath)
-                    .font(.caption)
+                    .font(.body)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button("Открыть папку") {
+                    let url = URL(fileURLWithPath: store.rulesFilePath)
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                }
             }
         }
         .formStyle(.grouped)
         .navigationTitle("Правила")
+        .sheet(isPresented: $showAddSheet) {
+            AddRuleSheet { rule in
+                store.addRule(rule)
+                showAddSheet = false
+            } onCancel: {
+                showAddSheet = false
+            }
+        }
     }
 
     @ViewBuilder
@@ -83,15 +89,77 @@ struct RulesView: View {
             }
         }
     }
+}
 
-    private func addRule() {
-        if (try? NSRegularExpression(pattern: newPattern, options: [.caseInsensitive])) == nil {
-            addError = "Невалидный regex"
+struct AddRuleSheet: View {
+    let onAdd: (Rule) -> Void
+    let onCancel: () -> Void
+
+    @State private var name: String = ""
+    @State private var pattern: String = ""
+    @State private var error: String = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Новое правило")
+                    .font(.headline)
+                Spacer()
+            }
+            .padding(20)
+
+            Divider()
+
+            Form {
+                Section {
+                    LabeledContent("Название") {
+                        TextField("Например: DROP TABLE", text: $name)
+                    }
+                    LabeledContent("Regex") {
+                        TextField("DROP\\s+TABLE", text: $pattern)
+                            .font(.system(.body, design: .monospaced))
+                    }
+                } footer: {
+                    Text("Шаблон будет проверяться на команде регулярным выражением (case-insensitive). При совпадении приложение запросит подтверждение.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+
+                if !error.isEmpty {
+                    Section {
+                        Text(error)
+                            .foregroundStyle(.red)
+                            .font(.callout)
+                    }
+                }
+            }
+            .formStyle(.grouped)
+            .frame(minHeight: 220)
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("Отмена", role: .cancel) { onCancel() }
+                    .keyboardShortcut(.cancelAction)
+                Button("Добавить") {
+                    submit()
+                }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .disabled(name.isEmpty || pattern.isEmpty)
+            }
+            .padding(20)
+        }
+        .frame(minWidth: 520, minHeight: 360)
+    }
+
+    private func submit() {
+        guard (try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive])) != nil else {
+            error = "Невалидный regex"
             return
         }
-        addError = ""
-        store.addRule(Rule(name: newName, pattern: newPattern, enabled: true, builtin: false))
-        newName = ""
-        newPattern = ""
+        error = ""
+        onAdd(Rule(name: name, pattern: pattern, enabled: true, builtin: false))
     }
 }
