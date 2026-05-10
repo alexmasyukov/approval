@@ -103,7 +103,7 @@ private struct MenuBarLabel: View {
 
     var body: some View {
         if pending.pending.isEmpty {
-            Image(systemName: "staroflife.fill")
+            Image(systemName: "staroflife")
         } else {
             // Принудительный красный — чтобы заметно «прыгало» в menu bar.
             // Template-режим тут отключается: иконка не будет адаптироваться
