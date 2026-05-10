@@ -46,7 +46,6 @@ struct InstallView: View {
         }
         .navigationTitle("Установка хука")
         .onAppear { load() }
-        .onChange(of: server.port) { _, _ in load() }
     }
 
     private func load() {
@@ -66,15 +65,10 @@ struct InstallView: View {
     private func substitute(_ template: String) -> String {
         let appPath = Bundle.main.bundlePath
         let appBin = Bundle.main.executablePath ?? "\(appPath)/Contents/MacOS/approval"
-        let port = "\(server.port)"
-        let appSupport = (FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?.path ?? "~/Library/Application Support")
-        let portFile = "\(appSupport)/approval/port"
 
         return template
             .replacingOccurrences(of: "{{APP_PATH}}", with: appPath)
             .replacingOccurrences(of: "{{APP_BIN}}", with: appBin)
-            .replacingOccurrences(of: "{{PORT}}", with: port)
-            .replacingOccurrences(of: "{{PORT_FILE}}", with: portFile)
     }
 
     private func copyAll() {

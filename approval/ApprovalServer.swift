@@ -2,9 +2,13 @@
 //  ApprovalServer.swift
 //  approval
 //
+//  Локальный IPC-сервер на Unix domain socket. Принимает по одному
+//  newline-delimited JSON-запросу на соединение, отвечает таким же
+//  JSON и закрывает соединение.
+//
 
 import Foundation
-import Network
+import Darwin
 import Combine
 
 @MainActor
@@ -13,218 +17,164 @@ final class ApprovalServer: ObservableObject {
 
     @Published private(set) var isRunning: Bool = false
     @Published private(set) var lastError: String = ""
-    @Published private(set) var port: UInt16
 
-    static let defaultPort: UInt16 = 47823
-    private var listener: NWListener?
+    private var serverFd: Int32 = -1
+    private var acceptThread: Thread?
 
-    init() {
-        let saved = UserDefaults.standard.integer(forKey: "serverPort")
-        self.port = (saved > 0 && saved <= 65535) ? UInt16(saved) : Self.defaultPort
-    }
-
-    func setPort(_ newPort: UInt16) {
-        guard newPort != port, newPort > 0 else { return }
-        stop()
-        port = newPort
-        UserDefaults.standard.set(Int(newPort), forKey: "serverPort")
-        start()
-    }
-
-    private func writePortFile() {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let dir = appSupport.appendingPathComponent("approval", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let file = dir.appendingPathComponent("port")
-        try? "\(port)\n".write(to: file, atomically: true, encoding: .utf8)
-    }
+    var socketPath: String { UnixSocket.socketPath }
 
     func start() {
-        guard listener == nil else { return }
-        do {
-            let params = NWParameters.tcp
-            params.allowLocalEndpointReuse = true
-            let l = try NWListener(using: params, on: NWEndpoint.Port(rawValue: port)!)
-            writePortFile()
-            l.newConnectionHandler = { [weak self] conn in
-                Task { @MainActor in
-                    self?.handle(connection: conn)
-                }
-            }
-            l.stateUpdateHandler = { [weak self] state in
-                Task { @MainActor in
-                    switch state {
-                    case .ready:
-                        self?.isRunning = true
-                        self?.lastError = ""
-                        print("ApprovalServer listening on \(self?.port ?? 0)")
-                    case .failed(let err):
-                        self?.isRunning = false
-                        self?.lastError = "Server failed: \(err.localizedDescription)"
-                        print("ApprovalServer failed: \(err)")
-                    case .cancelled:
-                        self?.isRunning = false
-                    default: break
-                    }
-                }
-            }
-            l.start(queue: .main)
-            listener = l
-        } catch {
-            lastError = "Failed to start: \(error.localizedDescription)"
-            print("Failed to start ApprovalServer: \(error)")
+        guard !isRunning else { return }
+
+        // Удалить старый сокет-файл если остался от прошлого запуска.
+        unlink(socketPath)
+
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard fd >= 0 else {
+            lastError = "socket() failed: \(String(cString: strerror(errno)))"
+            return
         }
+
+        var (addr, addrLen) = UnixSocket.makeAddr(path: socketPath)
+        let bindResult = withUnsafePointer(to: &addr) { ptr -> Int32 in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockPtr in
+                bind(fd, sockPtr, addrLen)
+            }
+        }
+        guard bindResult == 0 else {
+            lastError = "bind() failed: \(String(cString: strerror(errno)))"
+            close(fd)
+            return
+        }
+
+        // Только владелец может читать/писать в сокет.
+        chmod(socketPath, 0o600)
+
+        guard listen(fd, 32) == 0 else {
+            lastError = "listen() failed: \(String(cString: strerror(errno)))"
+            close(fd)
+            unlink(socketPath)
+            return
+        }
+
+        serverFd = fd
+        isRunning = true
+        lastError = ""
+        print("ApprovalServer listening on \(socketPath)")
+
+        // Захватываем fd в замыкание — потоку не нужно лезть обратно в actor.
+        let capturedFd = fd
+        let thread = Thread {
+            Self.acceptLoop(serverFd: capturedFd)
+        }
+        thread.name = "approval-server-accept"
+        thread.start()
+        acceptThread = thread
     }
 
     func stop() {
-        listener?.cancel()
-        listener = nil
+        guard isRunning else { return }
+        let fd = serverFd
+        serverFd = -1
         isRunning = false
+        close(fd) // accept() в фоне получит EBADF и выйдет из цикла
+        unlink(socketPath)
     }
 
-    private func handle(connection conn: NWConnection) {
-        conn.start(queue: .main)
-        receive(on: conn, accumulated: Data())
-    }
+    // MARK: - Accept loop (background thread)
 
-    private func receive(on conn: NWConnection, accumulated: Data) {
-        conn.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
-            guard let self = self else { return }
-
-            var buf = accumulated
-            if let data = data { buf.append(data) }
-
-            if let raw = String(data: buf, encoding: .utf8),
-               let headerEndRange = raw.range(of: "\r\n\r\n") {
-                let header = String(raw[..<headerEndRange.lowerBound])
-                let bodyStr = String(raw[headerEndRange.upperBound...])
-                var contentLength = 0
-                for line in header.split(separator: "\r\n") {
-                    let lower = line.lowercased()
-                    if lower.hasPrefix("content-length:") {
-                        let val = String(line).dropFirst("content-length:".count).trimmingCharacters(in: .whitespaces)
-                        contentLength = Int(val) ?? 0
-                    }
+    nonisolated private static func acceptLoop(serverFd: Int32) {
+        while true {
+            let clientFd = accept(serverFd, nil, nil)
+            if clientFd < 0 {
+                if errno == EBADF || errno == EINVAL {
+                    break // listening fd закрыт — выходим
                 }
-                let bodyData = Data(bodyStr.utf8)
-                if bodyData.count >= contentLength {
-                    let body = bodyData.prefix(contentLength)
-                    Task { @MainActor in
-                        self.processRequest(header: header, body: Data(body), conn: conn)
-                    }
-                    return
-                }
+                continue
             }
 
-            if isComplete || error != nil {
-                conn.cancel()
+            DispatchQueue.global(qos: .userInitiated).async {
+                Self.handleClient(fd: clientFd)
+            }
+        }
+    }
+
+    // MARK: - Client handling (background thread)
+
+    nonisolated private static func handleClient(fd: Int32) {
+        defer {
+            // fd закроется либо тут (если ошибка), либо после ответа в sendResponse.
+        }
+
+        guard let data = UnixSocket.readLine(fd: fd) else {
+            close(fd)
+            return
+        }
+
+        struct Req: Decodable {
+            let command: String
+            let cwd: String?
+            let source: String?
+        }
+        guard let req = try? JSONDecoder().decode(Req.self, from: data) else {
+            sendResponse(fd: fd, approved: false, reason: "bad json")
+            return
+        }
+
+        Task { @MainActor in
+            let store = RulesStore.shared
+            if store.config.mode == .passThrough {
+                Self.sendResponse(fd: fd, approved: true, reason: "pass-through mode")
                 return
             }
-            self.receive(on: conn, accumulated: buf)
+            guard let matched = store.evaluate(command: req.command) else {
+                Self.sendResponse(fd: fd, approved: true, reason: "no rule matched")
+                return
+            }
+
+            let id = UUID().uuidString
+            let detailReason = """
+            Совпадение с правилом: \(matched.name)
+            Паттерн: \(matched.pattern)
+
+            Рабочая директория: \(req.cwd ?? "—")
+            """
+            let cmd = PendingCommand(
+                id: id,
+                source: req.source ?? "Claude Code",
+                command: req.command,
+                reason: detailReason
+            )
+
+            LogStore.shared.append(LogEntry(
+                id: id,
+                timestamp: Date(),
+                command: req.command,
+                source: req.source ?? "Claude Code",
+                cwd: req.cwd,
+                ruleName: matched.name,
+                rulePattern: matched.pattern,
+                decision: .pending,
+                resolvedAt: nil
+            ))
+
+            PendingStore.shared.add(cmd) { approved in
+                Self.sendResponse(
+                    fd: fd,
+                    approved: approved,
+                    reason: approved ? "user approved" : "user denied"
+                )
+            }
+
+            ApprovalCoordinator.shared.requestApproval(for: cmd)
         }
     }
 
-    private func processRequest(header: String, body: Data, conn: NWConnection) {
-        guard let firstLine = header.split(separator: "\r\n").first else {
-            sendResponse(conn: conn, status: 400, body: "Bad Request")
-            return
+    nonisolated private static func sendResponse(fd: Int32, approved: Bool, reason: String) {
+        let payload: [String: Any] = ["approved": approved, "reason": reason]
+        if let data = try? JSONSerialization.data(withJSONObject: payload) {
+            _ = UnixSocket.writeLine(fd: fd, data: data)
         }
-        let parts = firstLine.split(separator: " ")
-        guard parts.count >= 2 else {
-            sendResponse(conn: conn, status: 400, body: "Bad Request")
-            return
-        }
-        let method = String(parts[0])
-        let path = String(parts[1])
-
-        switch (method, path) {
-        case ("POST", "/check"):
-            handleCheck(body: body, conn: conn)
-        case ("GET", "/health"):
-            sendResponse(conn: conn, status: 200, body: "{\"status\":\"ok\"}", contentType: "application/json")
-        default:
-            sendResponse(conn: conn, status: 404, body: "Not Found")
-        }
-    }
-
-    struct CheckRequest: Codable {
-        let command: String
-        let cwd: String?
-        let source: String?
-    }
-
-    private func handleCheck(body: Data, conn: NWConnection) {
-        guard let req = try? JSONDecoder().decode(CheckRequest.self, from: body) else {
-            sendResponse(conn: conn, status: 400, body: "{\"approved\":false,\"reason\":\"bad json\"}", contentType: "application/json")
-            return
-        }
-
-        let store = RulesStore.shared
-
-        if store.config.mode == .passThrough {
-            sendResponse(conn: conn, status: 200,
-                         body: "{\"approved\":true,\"reason\":\"pass-through mode\"}",
-                         contentType: "application/json")
-            return
-        }
-
-        guard let matched = store.evaluate(command: req.command) else {
-            sendResponse(conn: conn, status: 200,
-                         body: "{\"approved\":true,\"reason\":\"no rule matched\"}",
-                         contentType: "application/json")
-            return
-        }
-
-        let id = UUID().uuidString
-        let detailReason = """
-        Совпадение с правилом: \(matched.name)
-        Паттерн: \(matched.pattern)
-
-        Рабочая директория: \(req.cwd ?? "—")
-        """
-        let cmd = PendingCommand(
-            id: id,
-            source: req.source ?? "Claude Code",
-            command: req.command,
-            reason: detailReason
-        )
-
-        LogStore.shared.append(LogEntry(
-            id: id,
-            timestamp: Date(),
-            command: req.command,
-            source: req.source ?? "Claude Code",
-            cwd: req.cwd,
-            ruleName: matched.name,
-            rulePattern: matched.pattern,
-            decision: .pending,
-            resolvedAt: nil
-        ))
-
-        PendingStore.shared.add(cmd) { [weak self] approved in
-            let respJson = "{\"approved\":\(approved ? "true" : "false"),\"reason\":\"\(approved ? "user approved" : "user denied")\"}"
-            self?.sendResponse(conn: conn, status: 200, body: respJson, contentType: "application/json")
-        }
-
-        ApprovalCoordinator.shared.requestApproval(for: cmd)
-    }
-
-    private func sendResponse(conn: NWConnection, status: Int, body: String, contentType: String = "text/plain") {
-        let statusText: String
-        switch status {
-        case 200: statusText = "OK"
-        case 400: statusText = "Bad Request"
-        case 404: statusText = "Not Found"
-        default: statusText = "Error"
-        }
-        let resp = "HTTP/1.1 \(status) \(statusText)\r\n" +
-                   "Content-Type: \(contentType)\r\n" +
-                   "Content-Length: \(body.utf8.count)\r\n" +
-                   "Connection: close\r\n" +
-                   "\r\n" +
-                   body
-        conn.send(content: Data(resp.utf8), completion: .contentProcessed { _ in
-            conn.cancel()
-        })
+        close(fd)
     }
 }

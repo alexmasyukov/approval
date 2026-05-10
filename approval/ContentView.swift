@@ -65,10 +65,6 @@ struct StatusView: View {
     @EnvironmentObject var pending: PendingStore
     @EnvironmentObject var store: RulesStore
 
-    @State private var showPortAlert = false
-    @State private var portInput: String = ""
-    @State private var portError: String = ""
-
     var body: some View {
         Form {
             Section("Сервер") {
@@ -79,18 +75,6 @@ struct StatusView: View {
                             .frame(width: 10, height: 10)
                         Text(server.isRunning ? "слушает" : "не запущен")
                     }
-                }
-                if server.isRunning {
-                    LabeledContent("Адрес") {
-                        Text(verbatim: "http://localhost:\(server.port)")
-                            .font(.system(.body, design: .monospaced))
-                            .textSelection(.enabled)
-                    }
-                }
-                Button("Изменить порт") {
-                    portInput = "\(server.port)"
-                    portError = ""
-                    showPortAlert = true
                 }
                 if !server.lastError.isEmpty {
                     Text(server.lastError)
@@ -143,26 +127,6 @@ struct StatusView: View {
         }
         .formStyle(.grouped)
         .navigationTitle("Статус")
-        .alert("Изменить порт сервера", isPresented: $showPortAlert) {
-            TextField("Порт (1-65535)", text: $portInput)
-            Button("Применить") {
-                applyPortChange()
-            }
-            Button("Отмена", role: .cancel) {}
-        } message: {
-            Text("Сервер перезапустится на новом порту.\(portError.isEmpty ? "" : "\n\n\(portError)")")
-        }
-    }
-
-    private func applyPortChange() {
-        let trimmed = portInput.trimmingCharacters(in: .whitespaces)
-        guard let p = Int(trimmed), p > 0, p <= 65535 else {
-            portError = "Введите число от 1 до 65535"
-            showPortAlert = true
-            return
-        }
-        portError = ""
-        server.setPort(UInt16(p))
     }
 
     private func fireLocal(command: String) {

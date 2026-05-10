@@ -2,15 +2,15 @@
 //  HookHandler.swift
 //  approval
 //
-//  Логика PreToolUse-хука для Claude Code, встроенная прямо в бинарник.
+//  Логика PreToolUse-хука для Claude Code, встроенная в бинарник.
 //  Активируется аргументом `--hook` (см. main.swift).
 //
 
 import Foundation
+import Darwin
 
 enum HookHandler {
-    private static let defaultPort: Int = 47823
-    private static let timeoutSeconds: TimeInterval = 600
+    private static let timeoutSeconds: Int = 600
 
     static func run() -> Never {
         guard let stdinData = readStdin() else {
@@ -25,71 +25,79 @@ enum HookHandler {
         }
 
         guard let input = try? JSONDecoder().decode(HookInput.self, from: stdinData) else {
-            exit(0) // невалидный JSON — пропустить
-        }
-
-        guard input.tool_name == "Bash" else {
-            exit(0) // только Bash интересует
-        }
-
-        let command = input.tool_input?.command ?? ""
-        guard !command.isEmpty else {
             exit(0)
         }
+        guard input.tool_name == "Bash" else { exit(0) }
 
-        let port = readPort()
-        let url = URL(string: "http://localhost:\(port)/check")!
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.timeoutInterval = timeoutSeconds
+        let command = input.tool_input?.command ?? ""
+        guard !command.isEmpty else { exit(0) }
 
         let payload: [String: String] = [
             "command": command,
             "cwd": input.cwd ?? "",
             "source": "Claude Code"
         ]
-        req.httpBody = try? JSONSerialization.data(withJSONObject: payload)
-
-        let semaphore = DispatchSemaphore(value: 0)
-        var approved = true
-        var reason = ""
-        var transportError: Error?
-
-        let session = URLSession(configuration: .ephemeral)
-        let task = session.dataTask(with: req) { data, _, error in
-            defer { semaphore.signal() }
-            if let error = error {
-                transportError = error
-                return
-            }
-            if let data = data,
-               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                approved = json["approved"] as? Bool ?? true
-                reason = json["reason"] as? String ?? ""
-            }
-        }
-        task.resume()
-
-        let waitResult = semaphore.wait(timeout: .now() + timeoutSeconds + 5)
-        if waitResult == .timedOut {
-            task.cancel()
-            writeStderr("approval hook: timeout, allowing")
+        guard let payloadData = try? JSONSerialization.data(withJSONObject: payload) else {
             exit(0)
         }
 
-        if let err = transportError {
-            // Сервер недоступен (приложение не запущено) — fail-open с warning'ом.
-            writeStderr("approval hook: server unreachable (\(err.localizedDescription)); allowing")
-            exit(0)
-        }
+        let result = roundTrip(request: payloadData)
 
-        if approved {
+        switch result {
+        case .approved:
             exit(0)
-        } else {
+        case .denied(let reason):
             writeStderr("Команда отклонена через approval app: \(reason)")
             exit(2)
+        case .error(let message):
+            writeStderr("approval hook: \(message); allowing")
+            exit(0)
         }
+    }
+
+    // MARK: - Socket round-trip
+
+    private enum HookResult {
+        case approved
+        case denied(reason: String)
+        case error(message: String)
+    }
+
+    private static func roundTrip(request: Data) -> HookResult {
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        if fd < 0 {
+            return .error(message: "socket() failed: \(String(cString: strerror(errno)))")
+        }
+        defer { close(fd) }
+
+        // Read/write timeout — на случай если сервер завис.
+        var tv = timeval(tv_sec: timeoutSeconds, tv_usec: 0)
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+        setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+
+        var (addr, addrLen) = UnixSocket.makeAddr(path: UnixSocket.socketPath)
+        let connectResult = withUnsafePointer(to: &addr) { ptr -> Int32 in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockPtr in
+                connect(fd, sockPtr, addrLen)
+            }
+        }
+        if connectResult != 0 {
+            // Сервер не запущен — fail open
+            return .error(message: "сервер недоступен (\(String(cString: strerror(errno))))")
+        }
+
+        guard UnixSocket.writeLine(fd: fd, data: request) else {
+            return .error(message: "write failed")
+        }
+
+        guard let response = UnixSocket.readLine(fd: fd),
+              let json = try? JSONSerialization.jsonObject(with: response) as? [String: Any] else {
+            return .error(message: "не удалось прочитать ответ")
+        }
+
+        let approved = json["approved"] as? Bool ?? true
+        let reason = json["reason"] as? String ?? ""
+        return approved ? .approved : .denied(reason: reason)
     }
 
     // MARK: -
@@ -103,15 +111,6 @@ enum HookHandler {
             data.append(chunk)
         }
         return data.isEmpty ? nil : data
-    }
-
-    private static func readPort() -> Int {
-        let path = ("~/Library/Application Support/approval/port" as NSString).expandingTildeInPath
-        if let content = try? String(contentsOfFile: path, encoding: .utf8),
-           let value = Int(content.trimmingCharacters(in: .whitespacesAndNewlines)) {
-            return value
-        }
-        return defaultPort
     }
 
     private static func writeStderr(_ message: String) {
