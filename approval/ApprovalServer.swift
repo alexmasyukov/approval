@@ -158,7 +158,17 @@ final class ApprovalServer: ObservableObject {
                 resolvedAt: nil
             ))
 
+            // Server-side таймаут: если юзер не среагировал за время чуть
+            // больше hook-таймаута — авто-deny, чтобы не плодить заклинившие
+            // pending-записи.
+            let serverTimeout = TimeInterval(IPCProtocol.hookTimeoutSeconds + 60)
+            let timeoutWork = DispatchWorkItem {
+                PendingStore.shared.resolve(id: id, approved: false)
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + serverTimeout, execute: timeoutWork)
+
             PendingStore.shared.add(cmd) { approved in
+                timeoutWork.cancel()
                 Self.sendResponse(
                     fd: fd,
                     approved: approved,
