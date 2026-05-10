@@ -29,6 +29,11 @@ enum AppMode: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+// v1.1.0 убрал поле `builtin: Bool` из Rule — теперь все правила
+// одинаково удаляемые/редактируемые. JSONDecoder игнорирует
+// неизвестные ключи, поэтому старые rules.json с `"builtin": true`
+// декодируются без ошибок и теряют это поле при следующей записи.
+// Down-grade на старую версию приведёт к потере built-in-меток.
 struct Rule: Identifiable, Codable, Equatable, Hashable {
     var id: String
     var name: String

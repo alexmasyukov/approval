@@ -22,11 +22,16 @@ final class PendingStore: ObservableObject {
         pending.append(command)
     }
 
-    func resolve(id: String, approved: Bool) {
-        if let entry = entries.removeValue(forKey: id) {
-            pending.removeAll { $0.id == id }
-            entry.onResolve(approved)
-        }
+    /// Возвращает true, если запрос реально был отрезолвлен этим вызовом.
+    /// Повторные вызовы (например, timeout сработал после Approve/Cancel)
+    /// возвращают false и не дёргают onResolve повторно — caller'у
+    /// удобно по этому флагу решать, надо ли посылать ответ хуку.
+    @discardableResult
+    func resolve(id: String, approved: Bool) -> Bool {
+        guard let entry = entries.removeValue(forKey: id) else { return false }
+        pending.removeAll { $0.id == id }
+        entry.onResolve(approved)
+        return true
     }
 
     func get(id: String) -> PendingCommand? {

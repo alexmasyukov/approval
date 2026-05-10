@@ -52,6 +52,10 @@ struct StatusView: View {
             }
 
             Section(l10n.tr("status.section.test")) {
+                Text(l10n.tr("status.test.disclaimer"))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 Button(l10n.tr("status.test.drop")) {
                     fireLocal(command: "DROP TABLE users; DROP TABLE orders;")
                 }
