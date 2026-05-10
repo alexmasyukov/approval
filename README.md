@@ -51,7 +51,7 @@ If `approval` isn't running, the hook fails open with a warning to stderr — yo
 - **Verbose / minimal notifications** — a toggle in *Settings*. Verbose shows full title and body; minimal is one short line.
 - **Activity log** — last 100 filtered requests with timestamp, matched rule, decision (approved / denied / pending). Click "Open folder" to find the JSON file.
 - **🇷🇺 Russian + 🇬🇧 English UI** — switchable from *Settings → Interface language*. Applies instantly without restart, including the install instructions.
-- **Menu bar icon (optional)** — a `checkmark.shield` lives in the menu bar with a count of pending requests; switches to `exclamationmark.shield` when something needs your attention. Toggleable.
+- **Menu bar icon (optional)** — a `staroflife.fill` lives in the menu bar with a count of pending requests; switches to a red `exclamationmark.triangle.fill` when something needs your attention. Toggleable.
 - **Hide Dock icon (optional)** — runs as `.accessory`, freeing the Dock and Cmd+Tab. Switches on the fly without restart. Locked behind the menu-bar toggle so you can't lose access to the UI.
 - **macOS Settings.app look** — `Form { Section { ... } }.formStyle(.grouped)`, `LabeledContent`, `NavigationSplitView` with sidebar. Native, not a web view.
 
