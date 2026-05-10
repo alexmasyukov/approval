@@ -2,8 +2,8 @@
 
 Fresh assessment after the v1.3.0 release (font-scale in detail window, direct-confirmation mode, X-as-cancel, swapped button colors). The original `REFACTORING.md` is the historical roadmap up to v1.0 — most of its items are done. This document focuses on what's worth fixing **now**, in the post-v1.0 state.
 
-> **Status update (v1.3.1 cycle):**
-> Issues #1, #2, and #5 have been addressed. See [Done in v1.3.1](#done-in-v131) at the bottom for the actual diff each one became.
+> **Status update (v1.3.1+ cycle):**
+> Issues #1, #2, #4, #5, #6, #8, #10, plus part of #9 have been addressed. See [Done since v1.3.0](#done-since-v130) at the bottom for the actual diff each one became.
 
 ---
 
@@ -333,16 +333,23 @@ Pick one. If keeping: create `approval/approval.entitlements` with the key, wire
 
 ---
 
-## Done in v1.3.1
+## Done since v1.3.0
+
+Released as a chain of small commits on `main` (`d4daf29`, `1fd10cd`, `e100853`, `c052d60`):
 
 - **#1 (P0) WindowManager double-resolve race** — collapsed `didResolve` flag into atomic `entries.removeValue(forKey:)` inside `wrappedResolve`. `windowWillClose` now also uses `removeValue` and exits if the entry was already removed by an explicit Approve/Cancel. Single source of truth: presence in the dictionary == "still pending."
-- **#2 (P1) IPC observability** — `ApprovalServer.sendResponse` now captures the `writeLine` boolean and logs failures via `os.Logger(subsystem: "com.alexmasyukov.approval", category: "ipc")` with errno text. Encoding failures also logged separately. Behaviour unchanged (hook still falls open via timeout) — only visibility added.
+- **#2 (P1) IPC observability** — `ApprovalServer.sendResponse` now captures the `writeLine` boolean and logs failures via `os.Logger(subsystem: "com.alexmasyukov.approval", category: "ipc")` with errno text. Encoding failures also logged. Behaviour unchanged (hook still falls open via timeout) — only visibility added.
+- **#4 (P2) PendingStore.resolve idempotence** — now `@discardableResult Bool`. Returns `true` on real resolution, `false` when the entry was already gone (e.g. timeout firing after explicit Approve/Cancel). Lets future callers gate side effects on whether the resolve actually happened.
 - **#5 (P1) `.timeSensitive`** — opted to drop the request rather than fake the entitlement. macOS was silently downgrading to `.active` anyway because `com.apple.developer.usernotifications.time-sensitive` is a restricted entitlement requiring an Apple-approved App ID. Both the auth options and `content.interruptionLevel` now use `.active`. Comment in `NotificationClient.swift` documents why.
-- **Bonus — Xcode warnings cleanup** — replaced deprecated `NSApp.activate(ignoringOtherApps: true)` and `NSRunningApplication.activate(options:)` with their no-arg equivalents; added `nonisolated` to `CheckRequest`, `UnixSocket` static methods and the `ipcLog` constant so they don't conflict with the project's MainActor default isolation; resized `icon_512x512@2x.png` from 2048×2048 to the correct 1024×1024.
+- **#6 (P2) RulesStore debounced async save** — mutations no longer block the main thread on synchronous JSON-encode + atomic write. They schedule a write on a background utility queue with a 300 ms debounce; multiple rapid edits collapse into one I/O. First-load write (when rules.json doesn't exist) stays sync. `AppContainer.shutdown()` calls `rules.flushSync()` before quitting. Tests updated to call `flushSync()` between mutation and reload.
+- **#8 (P3) Models migration comment** — added the doc-comment above `Rule` explaining that v1.1.0 removed the `builtin` field, JSONDecoder ignores unknown keys, and down-grade loses the distinction.
+- **#9 (P1) test coverage — partial** — added `Tests/ApprovalCoreTests/PendingStoreTests.swift` with 7 tests: add/resolve happy paths, idempotent re-resolve, unknown-id no-op, approved-flag wiring, get() before/after resolve, insertion-order preservation. Total tests: 49, run in ~17 ms. The IPC round-trip test (`ApprovalServer` ↔ `HookHandler`) and `WindowManager` re-entrancy tests still want either an XCTest target inside the xcodeproj or moving the IPC files into the SPM target — left as an open subset of #9.
+- **#10 (P2) test-buttons disclaimer** — added an explanatory line above the test-trigger buttons in `StatusView` clarifying that the buttons only push commands through the approval pipeline to verify the notification + window flow, and the commands themselves do not execute. RU + EN.
+- **Bonus — Xcode warnings cleanup** — replaced deprecated `NSApp.activate(ignoringOtherApps: true)` and `NSRunningApplication.activate(options:)` with their no-arg equivalents (macOS 14+); marked `CheckRequest`, `AppMode`, `Rule`, `RulesConfig`, `UnixSocket` static methods, and the `ipcLog` constant as `nonisolated` so they don't conflict with the project's MainActor default isolation; resized `icon_512x512@2x.png` from 2048×2048 to the correct 1024×1024.
 
-Tried but reverted: a `UnixSocketTests.swift` file with `socketpair()`-based round-trip tests. The EOF and write-to-closed-peer tests turned out to be flaky on macOS 26 — they hung the test process indefinitely. The full IPC integration test (#9-rest) still wants a different approach: either moving `ApprovalServer`/`HookHandler` into the SPM target, or adding an XCTest target inside the xcodeproj.
+Tried but reverted: a `UnixSocketTests.swift` file with `socketpair()`-based round-trip tests. The EOF and write-to-closed-peer tests turned out to be flaky on macOS 26 — they hung the test process indefinitely. The full IPC integration test still wants a different approach: either moving `ApprovalServer`/`HookHandler` into the SPM target (blocked by `ApprovalCoordinator`'s AppKit dependency — needs a protocol seam first), or adding an XCTest target inside the xcodeproj.
 
-Still open: #3 (accept-loop strong refs), #4 (PendingStore.resolve returning Bool), #6 (RulesStore async save), #7 (SettingsStore extraction), #8 (Models migration comment), #9-rest, #10 (test buttons framing), #11 (xcstrings), #12 (concurrency cleanup), #13 (signing/DMG).
+**Still open:** #3 (accept-loop strong refs), #7 (SettingsStore extraction), #9-rest (IPC + WindowManager integration tests), #11 (xcstrings), #12 (concurrency cleanup), #13 (signing/DMG). #3 should wait until either #9-rest or a stand-in test harness exists. #7 is medium-risk because the previous SwiftUI bug with `MenuBarExtra(isInserted:)` + `@Published` boolean would resurface; current code uses `@AppStorage` to dodge it, and a SettingsStore would have to be careful not to undo that workaround.
 
 ---
 
