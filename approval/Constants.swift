@@ -59,6 +59,10 @@ enum DefaultsKeys {
     /// Bool. Если true — пропускаем системное уведомление и сразу
     /// открываем окно подтверждения с активацией приложения. По умолчанию false.
     static let directConfirmation = "directConfirmation"
+
+    /// Double. Множитель размера шрифта в окне подтверждения (1.0 = 100%).
+    /// Управляется кнопками -/+ в самом окне. По умолчанию 1.0.
+    static let detailFontScale = "detailFontScale"
 }
 
 // MARK: - System URLs
