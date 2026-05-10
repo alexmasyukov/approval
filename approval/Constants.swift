@@ -45,6 +45,9 @@ enum NotificationConstants {
 enum DefaultsKeys {
     /// Bool, по умолчанию true. Полный текст vs короткий в системном уведомлении.
     static let verboseNotifications = "verboseNotifications"
+
+    /// Идентификатор языка UI ("ru" или "en"). По умолчанию "ru".
+    static let appLanguage = "appLanguage"
 }
 
 // MARK: - System URLs

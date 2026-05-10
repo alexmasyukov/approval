@@ -8,36 +8,37 @@ import AppKit
 
 struct LogView: View {
     @EnvironmentObject var log: LogStore
+    @EnvironmentObject var l10n: L10n
     @State private var showClearConfirm = false
 
     var body: some View {
         Form {
-            Section("Информация") {
-                LabeledContent("Записей", value: "\(log.entries.count) / 100")
+            Section(l10n.tr("log.section.info")) {
+                LabeledContent(l10n.tr("log.entries_count"), value: "\(log.entries.count) / 100")
                 Button(role: .destructive) {
                     showClearConfirm = true
                 } label: {
-                    Text("Очистить лог")
+                    Text(l10n.tr("log.clear_button"))
                 }
                 .disabled(log.entries.isEmpty)
             }
 
-            Section("Файл") {
-                LabeledContent("Путь") {
+            Section(l10n.tr("log.section.file")) {
+                LabeledContent(l10n.tr("log.path")) {
                     Text(log.logFilePath)
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
                 }
-                Button("Открыть папку") {
+                Button(l10n.tr("common.open_folder")) {
                     let url = URL(fileURLWithPath: log.logFilePath)
                     NSWorkspace.shared.activateFileViewerSelecting([url])
                 }
             }
 
-            Section("История запросов") {
+            Section(l10n.tr("log.section.history")) {
                 if log.entries.isEmpty {
-                    Text("пока пусто — здесь появятся команды, попавшие под фильтр")
+                    Text(l10n.tr("log.empty"))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 } else {
@@ -48,14 +49,16 @@ struct LogView: View {
             }
         }
         .formStyle(.grouped)
-        .navigationTitle("Лог")
-        .confirmationDialog("Очистить лог?", isPresented: $showClearConfirm, titleVisibility: .visible) {
-            Button("Очистить", role: .destructive) {
+        .navigationTitle(l10n.tr("log.title"))
+        .confirmationDialog(l10n.tr("log.clear_confirm.title"),
+                            isPresented: $showClearConfirm,
+                            titleVisibility: .visible) {
+            Button(l10n.tr("common.clear"), role: .destructive) {
                 log.clear()
             }
-            Button("Отмена", role: .cancel) {}
+            Button(l10n.tr("common.cancel"), role: .cancel) {}
         } message: {
-            Text("Все \(log.entries.count) записей будут удалены без возможности восстановления.")
+            Text(l10n.tr("log.clear_confirm.message"))
         }
     }
 
@@ -101,7 +104,7 @@ struct LogView: View {
     @ViewBuilder
     private func decisionBadge(_ decision: LogDecision) -> some View {
         let (color, symbol) = badgeStyle(for: decision)
-        Label(decision.label, systemImage: symbol)
+        Label(l10n.tr(decision.labelKey), systemImage: symbol)
             .labelStyle(.titleAndIcon)
             .font(.callout.bold())
             .padding(.horizontal, 6)

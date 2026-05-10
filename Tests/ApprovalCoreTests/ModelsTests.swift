@@ -88,9 +88,9 @@ final class ModelsTests: XCTestCase {
         XCTAssertEqual(decoded.decision, original.decision)
     }
 
-    func test_logDecision_allCasesHaveLabel() {
+    func test_logDecision_allCasesHaveLabelKey() {
         for d in LogDecision.allCases {
-            XCTAssertFalse(d.label.isEmpty)
+            XCTAssertFalse(d.labelKey.isEmpty)
         }
     }
 }

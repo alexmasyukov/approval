@@ -14,8 +14,15 @@ import Combine
 
 @MainActor
 final class NotificationClient: NSObject, ObservableObject {
-    @Published private(set) var authStatus: String = "не запрошено"
+    @Published private(set) var authStatusKey: String = "auth.not_determined"
     @Published var lastError: String = ""
+
+    /// Инжектится из AppContainer после создания.
+    weak var l10n: L10n?
+
+    var authStatus: String {
+        l10n?.tr(authStatusKey) ?? authStatusKey
+    }
 
     /// Колбэки, которые дёргаются когда пользователь решил судьбу
     /// уведомления (тапнул, отклонил, нажал action). Установить из
@@ -49,17 +56,17 @@ final class NotificationClient: NSObject, ObservableObject {
 
     func refreshAuthStatus() {
         UNUserNotificationCenter.current().getNotificationSettings { [weak self] settings in
-            let text: String
+            let key: String
             switch settings.authorizationStatus {
-            case .notDetermined: text = "не запрошено"
-            case .denied: text = "запрещено ❌"
-            case .authorized: text = "разрешено ✅"
-            case .provisional: text = "временно (provisional)"
-            case .ephemeral: text = "ephemeral"
-            @unknown default: text = "неизвестно"
+            case .notDetermined: key = "auth.not_determined"
+            case .denied:        key = "auth.denied"
+            case .authorized:    key = "auth.authorized"
+            case .provisional:   key = "auth.provisional"
+            case .ephemeral:     key = "auth.ephemeral"
+            @unknown default:    key = "auth.unknown"
             }
             DispatchQueue.main.async {
-                self?.authStatus = text
+                self?.authStatusKey = key
             }
         }
     }
@@ -70,12 +77,13 @@ final class NotificationClient: NSObject, ObservableObject {
         let verbose = UserDefaults.standard.object(forKey: DefaultsKeys.verboseNotifications) as? Bool ?? true
 
         let content = UNMutableNotificationContent()
+        let lang = l10n
         if verbose {
-            content.title = "⚠️ Запрос на подтверждение опасной команды"
-            content.body = "Claude Code хочет выполнить деструктивную операцию. Откройте оповещение, чтобы посмотреть детали и подтвердить или отменить."
+            content.title = lang?.tr("notif.verbose.title") ?? "⚠️ Approval"
+            content.body = lang?.tr("notif.verbose.body") ?? "Confirmation required"
         } else {
-            content.title = "Approval"
-            content.body = "Требуется подтверждение"
+            content.title = lang?.tr("notif.minimal.title") ?? "Approval"
+            content.body = lang?.tr("notif.minimal.body") ?? "Confirmation required"
         }
         content.categoryIdentifier = NotificationConstants.categoryID
         content.sound = .default

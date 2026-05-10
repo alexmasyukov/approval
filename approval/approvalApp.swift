@@ -17,6 +17,7 @@ final class AppContainer {
     let windows: WindowManager
     let coordinator: ApprovalCoordinator
     let server: ApprovalServer
+    let l10n: L10n
 
     init() {
         let rules = RulesStore()
@@ -24,11 +25,13 @@ final class AppContainer {
         let log = LogStore()
         let notifications = NotificationClient()
         let windows = WindowManager()
+        let l10n = L10n()
         let coordinator = ApprovalCoordinator(
             pending: pending,
             log: log,
             notifications: notifications,
-            windows: windows
+            windows: windows,
+            l10n: l10n
         )
         let server = ApprovalServer(
             rules: rules,
@@ -42,8 +45,15 @@ final class AppContainer {
         self.log = log
         self.notifications = notifications
         self.windows = windows
+        self.l10n = l10n
         self.coordinator = coordinator
         self.server = server
+
+        // NotificationClient тоже нужен L10n для текста уведомлений и
+        // auth-статуса. Передаём через свойство, не через init —
+        // чтобы не тянуть L10n в конструктор каждой UI-зависимой вещи.
+        notifications.l10n = l10n
+        windows.l10n = l10n
     }
 
     func bootstrap() {
@@ -69,6 +79,7 @@ struct approvalApp: App {
                 .environmentObject(appDelegate.container.notifications)
                 .environmentObject(appDelegate.container.coordinator)
                 .environmentObject(appDelegate.container.server)
+                .environmentObject(appDelegate.container.l10n)
         }
     }
 }

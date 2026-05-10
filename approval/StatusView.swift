@@ -12,6 +12,7 @@ struct StatusView: View {
     @EnvironmentObject var pending: PendingStore
     @EnvironmentObject var store: RulesStore
     @EnvironmentObject var log: LogStore
+    @EnvironmentObject var l10n: L10n
 
     var body: some View {
         Form {
@@ -19,13 +20,15 @@ struct StatusView: View {
                 passThroughBanner
             }
 
-            Section("Сервер") {
-                LabeledContent("Состояние") {
+            Section(l10n.tr("status.section.server")) {
+                LabeledContent(l10n.tr("status.server.state")) {
                     HStack(spacing: 6) {
                         Circle()
                             .fill(server.isRunning ? Color.green : Color.red)
                             .frame(width: 10, height: 10)
-                        Text(server.isRunning ? "слушает" : "не запущен")
+                        Text(server.isRunning
+                             ? l10n.tr("status.server.listening")
+                             : l10n.tr("status.server.stopped"))
                     }
                 }
                 if !server.lastError.isEmpty {
@@ -37,10 +40,10 @@ struct StatusView: View {
 
             modeSection
 
-            Section("Уведомления MacOS") {
-                LabeledContent("Статус", value: notifications.authStatus)
-                Button("Обновить статус") { notifications.refreshAuthStatus() }
-                Button("Открыть настройки уведомлений") { notifications.openSystemSettings() }
+            Section(l10n.tr("status.section.notifications")) {
+                LabeledContent(l10n.tr("status.notifications.status"), value: notifications.authStatus)
+                Button(l10n.tr("status.notifications.refresh")) { notifications.refreshAuthStatus() }
+                Button(l10n.tr("status.notifications.open_settings")) { notifications.openSystemSettings() }
                 if !notifications.lastError.isEmpty {
                     Text(notifications.lastError)
                         .font(.callout)
@@ -48,7 +51,8 @@ struct StatusView: View {
                 }
             }
 
-            Section("Тестирование оповещений") {
+            #if DEBUG
+            Section(l10n.tr("status.section.test") + " (DEBUG)") {
                 Button("Тест: DROP TABLE users") {
                     fireLocal(command: "DROP TABLE users; DROP TABLE orders;")
                 }
@@ -59,53 +63,37 @@ struct StatusView: View {
                     fireLocal(command: "SELECT * FROM users LIMIT 10")
                 }
             }
+            #endif
         }
         .formStyle(.grouped)
-        .navigationTitle("Статус")
+        .navigationTitle(l10n.tr("status.title"))
     }
 
     @ViewBuilder
     private var passThroughBanner: some View {
         Section {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.title)
-                    .foregroundStyle(.red)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Режим «Без проверки» включён")
-                        .font(.headline)
-                        .foregroundStyle(.red)
-                    Text("Все команды Claude Code проходят без проверки. Не забудь переключить обратно в «С проверкой и оповещениями».")
-                        .font(.callout)
-                }
-                Spacer()
-            }
-            .padding(.vertical, 4)
+            WarningBanner(
+                title: l10n.tr("status.passthrough.banner_title"),
+                message: l10n.tr("status.passthrough.banner_message")
+            )
         }
-        .listRowBackground(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.red.opacity(0.12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.red, lineWidth: 2)
-                )
-        )
+        .warningBackground()
     }
 
     private var modeSection: some View {
         Section {
-            Picker("Режим", selection: Binding(
+            Picker("Mode", selection: Binding(
                 get: { store.config.mode },
                 set: { store.setMode($0) }
             )) {
                 ForEach(AppMode.allCases) { m in
-                    Text(m.label).tag(m)
+                    Text(l10n.tr(m.labelKey)).tag(m)
                 }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
         } header: {
-            Text("Режим работы")
+            Text(l10n.tr("status.section.mode"))
                 .foregroundStyle(store.config.mode == .passThrough ? .red : .primary)
         }
     }
@@ -120,8 +108,8 @@ struct StatusView: View {
             source: "Test trigger (in-app)",
             command: command,
             reason: """
-            Совпадение с правилом: \(matched.name)
-            Паттерн: \(matched.pattern)
+            \(l10n.tr("rule.field.name")): \(matched.name)
+            \(l10n.tr("rule.field.regex")): \(matched.pattern)
             """
         )
         log.append(LogEntry(

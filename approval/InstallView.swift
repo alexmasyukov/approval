@@ -8,15 +8,17 @@ import AppKit
 
 struct InstallView: View {
     @EnvironmentObject var server: ApprovalServer
+    @EnvironmentObject var l10n: L10n
 
     @State private var rawMarkdown: String = ""
     @State private var loadError: String = ""
     @State private var copyFeedback: String = ""
 
     private var resourceName: String {
-        // Заглушка под будущую локализацию.
-        // Когда добавим .lproj — переключай по Locale.current здесь.
-        return "install_ru"
+        switch l10n.language {
+        case .en: return "install_en"
+        case .ru: return "install_ru"
+        }
     }
 
     var body: some View {
@@ -27,7 +29,7 @@ struct InstallView: View {
                     Button {
                         copyAll()
                     } label: {
-                        Label(copyFeedback.isEmpty ? "Скопировать всё" : copyFeedback,
+                        Label(copyFeedback.isEmpty ? l10n.tr("common.copy_all") : copyFeedback,
                               systemImage: "doc.on.doc")
                     }
                     .controlSize(.regular)
@@ -44,13 +46,14 @@ struct InstallView: View {
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .navigationTitle("Установка хука")
+        .navigationTitle(l10n.tr("sidebar.install"))
         .onAppear { load() }
+        .onChange(of: l10n.language) { _, _ in load() }
     }
 
     private func load() {
         guard let url = Bundle.main.url(forResource: resourceName, withExtension: "md") else {
-            loadError = "Ресурс \(resourceName).md не найден в bundle"
+            loadError = "Resource \(resourceName).md not found in bundle"
             return
         }
         do {
@@ -58,7 +61,7 @@ struct InstallView: View {
             rawMarkdown = substitute(template)
             loadError = ""
         } catch {
-            loadError = "Ошибка чтения: \(error.localizedDescription)"
+            loadError = "Read error: \(error.localizedDescription)"
         }
     }
 
@@ -74,7 +77,7 @@ struct InstallView: View {
     private func copyAll() {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(rawMarkdown, forType: .string)
-        copyFeedback = "Скопировано ✓"
+        copyFeedback = l10n.tr("common.copied")
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             copyFeedback = ""
         }

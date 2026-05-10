@@ -17,23 +17,28 @@ import Combine
 
 @MainActor
 final class ApprovalCoordinator: ObservableObject {
-    @Published var lastResult: String = "—"
+    /// Ключ результата ("result.approved" / "result.denied" / "result.dash").
+    /// View рендерит через l10n.tr(coordinator.lastResultKey).
+    @Published var lastResultKey: String = "result.dash"
 
     private let pending: PendingStore
     private let log: LogStore
     private let notifications: NotificationClient
     private let windows: WindowManager
+    private let l10n: L10n
 
     init(
         pending: PendingStore,
         log: LogStore,
         notifications: NotificationClient,
-        windows: WindowManager
+        windows: WindowManager,
+        l10n: L10n
     ) {
         self.pending = pending
         self.log = log
         self.notifications = notifications
         self.windows = windows
+        self.l10n = l10n
     }
 
     func setup() {
@@ -57,7 +62,7 @@ final class ApprovalCoordinator: ObservableObject {
         pending.resolve(id: id, approved: approved)
         log.updateDecision(id: id, decision: approved ? .approved : .denied)
         windows.closeWindow(id: id)
-        lastResult = approved ? "Подтверждено ✅" : "Отменено ❌"
+        lastResultKey = approved ? "result.approved" : "result.denied"
     }
 
     func openDetailWindow(for cmd: PendingCommand) {

@@ -8,12 +8,13 @@ import AppKit
 
 struct RulesView: View {
     @EnvironmentObject var store: RulesStore
+    @EnvironmentObject var l10n: L10n
 
     @State private var showAddSheet = false
 
     var body: some View {
         Form {
-            Section("Правила (\(store.config.rules.count))") {
+            Section("\(l10n.tr("rules.section.list")) (\(store.config.rules.count))") {
                 ForEach(store.config.rules) { rule in
                     ruleRow(rule)
                 }
@@ -21,25 +22,25 @@ struct RulesView: View {
                 Button {
                     showAddSheet = true
                 } label: {
-                    Label("Добавить правило", systemImage: "plus")
+                    Label(l10n.tr("rules.add_button"), systemImage: "plus")
                 }
             }
 
-            Section("Файл с правилами") {
+            Section(l10n.tr("rules.section.file")) {
                 Text(store.rulesFilePath)
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                Button("Открыть папку") {
+                Button(l10n.tr("common.open_folder")) {
                     let url = URL(fileURLWithPath: store.rulesFilePath)
                     NSWorkspace.shared.activateFileViewerSelecting([url])
                 }
             }
         }
         .formStyle(.grouped)
-        .navigationTitle("Правила")
+        .navigationTitle(l10n.tr("rules.title"))
         .sheet(isPresented: $showAddSheet) {
             AddRuleSheet { rule in
                 store.addRule(rule)
@@ -64,7 +65,7 @@ struct RulesView: View {
                 HStack(spacing: 6) {
                     Text(rule.name)
                     if rule.builtin {
-                        Text("builtin")
+                        Text(l10n.tr("rules.builtin_badge"))
                             .font(.caption2)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
@@ -95,6 +96,8 @@ struct AddRuleSheet: View {
     let onAdd: (Rule) -> Void
     let onCancel: () -> Void
 
+    @EnvironmentObject var l10n: L10n
+
     @State private var name: String = ""
     @State private var pattern: String = ""
     @State private var error: String = ""
@@ -102,7 +105,7 @@ struct AddRuleSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("Новое правило")
+                Text(l10n.tr("rule.new.title"))
                     .font(.title3)
                     .bold()
                 Spacer()
@@ -115,13 +118,13 @@ struct AddRuleSheet: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    formField(label: "Название") {
-                        TextField("Например: DROP TABLE", text: $name)
+                    formField(label: l10n.tr("rule.field.name")) {
+                        TextField(l10n.tr("rule.placeholder.name"), text: $name)
                             .textFieldStyle(.roundedBorder)
                             .controlSize(.large)
                     }
 
-                    formField(label: "Regex") {
+                    formField(label: l10n.tr("rule.field.regex")) {
                         VStack(alignment: .leading, spacing: 6) {
                             TextEditor(text: $pattern)
                                 .font(.system(.body, design: .monospaced))
@@ -134,7 +137,7 @@ struct AddRuleSheet: View {
                                 )
                                 .cornerRadius(6)
 
-                            Text("Шаблон проверяется регулярным выражением (case-insensitive). При совпадении с командой будет запрошено подтверждение.")
+                            Text(l10n.tr("rule.help.regex"))
                                 .font(.callout)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -158,9 +161,9 @@ struct AddRuleSheet: View {
 
             HStack {
                 Spacer()
-                Button("Отмена", role: .cancel) { onCancel() }
+                Button(l10n.tr("common.cancel"), role: .cancel) { onCancel() }
                     .keyboardShortcut(.cancelAction)
-                Button("Добавить") {
+                Button(l10n.tr("common.add")) {
                     submit()
                 }
                 .keyboardShortcut(.defaultAction)
@@ -187,7 +190,7 @@ struct AddRuleSheet: View {
     private func submit() {
         let trimmedPattern = pattern.trimmingCharacters(in: .whitespacesAndNewlines)
         guard (try? NSRegularExpression(pattern: trimmedPattern, options: [.caseInsensitive])) != nil else {
-            error = "Невалидный regex"
+            error = l10n.tr("rule.error.invalid_regex")
             return
         }
         error = ""

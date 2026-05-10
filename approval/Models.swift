@@ -20,10 +20,11 @@ enum AppMode: String, Codable, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var label: String {
+    /// L10n-ключ для UI-надписи. Сама строка резолвится через L10n.tr().
+    var labelKey: String {
         switch self {
-        case .validate:   return "С проверкой и оповещениями"
-        case .passThrough: return "Без проверки"
+        case .validate:   return "mode.validate"
+        case .passThrough: return "mode.passthrough"
         }
     }
 }

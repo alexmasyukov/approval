@@ -7,34 +7,44 @@ import SwiftUI
 
 struct GeneralSettingsView: View {
     @AppStorage(DefaultsKeys.verboseNotifications) private var verboseNotifications: Bool = true
+    @EnvironmentObject var l10n: L10n
 
     var body: some View {
         Form {
-            Section("Оповещения") {
-                Toggle("Подробные оповещения", isOn: $verboseNotifications)
+            Section(l10n.tr("settings.section.notifications")) {
+                Toggle(l10n.tr("settings.verbose_toggle"), isOn: $verboseNotifications)
                 Text(verboseNotifications
-                     ? "Полный заголовок и описание в системном уведомлении."
-                     : "Минимальный заголовок и короткое тело.")
+                     ? l10n.tr("settings.verbose_on")
+                     : l10n.tr("settings.verbose_off"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
 
-            Section("Превью") {
+            Section(l10n.tr("settings.section.preview")) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(verboseNotifications
-                         ? "⚠️ Запрос на подтверждение опасной команды"
-                         : "Approval")
+                         ? l10n.tr("notif.verbose.title")
+                         : l10n.tr("notif.minimal.title"))
                         .font(.body.bold())
                     Text(verboseNotifications
-                         ? "Claude Code хочет выполнить деструктивную операцию. Откройте оповещение, чтобы посмотреть детали и подтвердить или отменить."
-                         : "Требуется подтверждение")
+                         ? l10n.tr("notif.verbose.body")
+                         : l10n.tr("notif.minimal.body"))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+
+            Section(l10n.tr("settings.section.language")) {
+                Picker(l10n.tr("settings.language.label"), selection: $l10n.language) {
+                    ForEach(AppLanguage.allCases) { lang in
+                        Text("\(lang.flag)  \(lang.displayName)").tag(lang)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
         }
         .formStyle(.grouped)
-        .navigationTitle("Настройки")
+        .navigationTitle(l10n.tr("settings.title"))
     }
 }

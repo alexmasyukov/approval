@@ -16,6 +16,10 @@ import SwiftUI
 final class WindowManager: NSObject {
     private var windows: [String: NSWindow] = [:]
 
+    /// Инжектится из контейнера: нужен чтобы прокинуть L10n в окружение
+    /// SwiftUI-окон (CommandDetailView читает локализацию).
+    weak var l10n: L10n?
+
     /// Открывает окно деталей для запроса (или поднимает существующее
     /// если уже открыто). При клике Approve/Cancel вызывается
     /// `onResolve(approved)`; вызывающий код должен сам закрыть окно
@@ -27,7 +31,9 @@ final class WindowManager: NSObject {
             return
         }
 
+        let l10n = self.l10n ?? L10n()
         let view = CommandDetailView(command: cmd, onResolve: onResolve)
+            .environmentObject(l10n)
         let hosting = NSHostingController(rootView: view)
         let window = NSWindow(contentViewController: hosting)
         window.title = "Запрос подтверждения"

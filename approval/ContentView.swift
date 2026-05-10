@@ -12,13 +12,14 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var notifications: NotificationClient
+    @EnvironmentObject var l10n: L10n
 
     @State private var selection: AppSection? = .status
 
     var body: some View {
         NavigationSplitView {
             List(AppSection.allCases, id: \.self, selection: $selection) { section in
-                Label(section.rawValue, systemImage: section.icon)
+                Label(l10n.tr(section.titleKey), systemImage: section.icon)
             }
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(200)

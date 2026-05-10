@@ -12,12 +12,13 @@ enum LogDecision: String, Codable, CaseIterable {
     case denied
     case dismissed
 
-    var label: String {
+    /// L10n-ключ для UI-надписи.
+    var labelKey: String {
         switch self {
-        case .pending: return "ожидание"
-        case .approved: return "подтверждено"
-        case .denied: return "отменено"
-        case .dismissed: return "закрыто"
+        case .pending: return "log.decision.pending"
+        case .approved: return "log.decision.approved"
+        case .denied: return "log.decision.denied"
+        case .dismissed: return "log.decision.dismissed"
         }
     }
 }
