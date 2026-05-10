@@ -148,6 +148,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Single-instance guard: если уже работает другой экземпляр —
+        // активируем его и завершаемся. Иначе два процесса дерутся за
+        // один и тот же Unix-сокет и пользователь получает зависания.
+        if MainActor.assumeIsolated({ activateExistingInstanceIfAny() }) {
+            return
+        }
+
         container.bootstrap()
         MainActor.assumeIsolated {
             applyDockPolicyFromDefaults(activateIfRegular: false)
@@ -175,6 +182,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
+    }
+
+    /// Возвращает true, если найден другой живой экземпляр того же
+    /// bundle id — после чего вызывающий должен немедленно отдать
+    /// управление обратно (мы запланировали terminate).
+    @MainActor
+    private func activateExistingInstanceIfAny() -> Bool {
+        let myPID = ProcessInfo.processInfo.processIdentifier
+        let bundleID = Bundle.main.bundleIdentifier ?? "alexmasyukov.approval"
+        let others = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+            .filter { $0.processIdentifier != myPID }
+        guard let existing = others.first else { return false }
+
+        existing.activate(options: [.activateIgnoringOtherApps])
+        // Откладываем terminate, чтобы applicationDidFinishLaunching
+        // успел вернуться, иначе AppKit может ругаться на teardown
+        // в середине запуска.
+        DispatchQueue.main.async { NSApp.terminate(nil) }
+        return true
     }
 
     @MainActor
