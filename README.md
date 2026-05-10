@@ -1,5 +1,7 @@
 # approval
 
+<img width="614" height="500" alt="image" src="https://github.com/user-attachments/assets/aa09d0fa-0f6f-4433-8cf3-89a6ee47e294" />
+
 A native macOS app that intercepts dangerous shell commands from [Claude Code](https://claude.com/claude-code) (and similar coding assistants) and asks you for explicit confirmation before they run.
 
 If your AI assistant ever tries to drop a database, truncate a table, or `rm -rf` something it shouldn't — `approval` catches it, sends you a system notification, and waits for you to approve or deny.
@@ -20,6 +22,10 @@ Coding assistants are useful, but giving them shell access is a tradeoff. Most o
 A single misfire on a real database is a very bad day. `approval` adds a tiny human-in-the-loop step for the dangerous things, while staying out of your way for everything else.
 
 ---
+
+
+<img width="906" height="620" alt="image" src="https://github.com/user-attachments/assets/0bf58237-cb40-4d2f-a1db-8ea1b702ac8b" />
+
 
 ## How it feels to use
 
