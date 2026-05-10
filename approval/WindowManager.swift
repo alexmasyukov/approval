@@ -49,11 +49,15 @@ final class WindowManager: NSObject {
 
         // Атомарность: removeValue либо сработает (тогда мы единственные,
         // кто вызовет onResolve), либо вернёт nil (значит windowWillClose
-        // или другой путь нас опередил — выходим без вызова).
+        // или другой путь нас опередил — выходим без вызова). Закрытие
+        // окна делаем здесь же, потому что coordinator.resolve позже
+        // вызовет closeWindow(id:), который к тому моменту уже не найдёт
+        // entry в словаре и ничего не сделает.
         let id = cmd.id
         let wrappedResolve: (Bool) -> Void = { [weak self] approved in
             guard let removed = self?.entries.removeValue(forKey: id) else { return }
             removed.onResolve(approved)
+            removed.window.close()
         }
 
         let l10n = self.l10n ?? L10n()

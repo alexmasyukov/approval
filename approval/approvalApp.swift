@@ -128,6 +128,13 @@ private struct MenuBarContent: View {
         Button(l10n.tr("menubar.open")) {
             NSApp.activate()
             openWindow(id: "main")
+            // В .accessory-режиме (Dock-icon скрыт) одного NSApp.activate
+            // мало — окно может остаться в фоне или не показаться вовсе.
+            // Форсируем main-окно поверх всех с orderFrontRegardless.
+            if let main = NSApp.windows.first(where: { $0.identifier?.rawValue == "main" }) {
+                main.makeKeyAndOrderFront(nil)
+                main.orderFrontRegardless()
+            }
         }
         Divider()
         Button(l10n.tr("menubar.quit")) {
