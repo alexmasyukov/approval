@@ -36,7 +36,7 @@ A single misfire on a real database is a very bad day. `approval` adds a tiny hu
    - **Approve** → the command runs as if nothing happened.
    - **Cancel** → the command is blocked, the assistant sees an error message and moves on.
 
-You can also dismiss the notification — that counts as **Cancel**.
+You can also dismiss the notification from **Notification Center** (swipe it away there, or hit *Clear*) — that counts as **Cancel**. Note: just swiping the corner banner only hides it, the request stays open until you act on it from Notification Center, the detail window, or the request times out (10 min).
 
 If `approval` isn't running, the hook fails open with a warning to stderr — your assistant still works, you just don't get the safety net until you launch the app.
 
