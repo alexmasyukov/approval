@@ -4,7 +4,7 @@ A native macOS app that intercepts dangerous shell commands from [Claude Code](h
 
 If your AI assistant ever tries to drop a database, truncate a table, or `rm -rf` something it shouldn't — `approval` catches it, sends you a system notification, and waits for you to approve or deny.
 
-> **Status:** prototype, hand-tested on macOS 26+. Not signed/notarized yet — build from source for now.
+> **Status:** v1.0 — first public release. Hand-tested on macOS 26+. Not signed/notarized yet — build from source for now.
 
 ---
 
