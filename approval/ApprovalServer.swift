@@ -141,7 +141,7 @@ final class ApprovalServer: ObservableObject {
             """
             let cmd = PendingCommand(
                 id: id,
-                source: req.source ?? "Claude Code",
+                source: req.source ?? IPCProtocol.defaultSource,
                 command: req.command,
                 reason: detailReason
             )
@@ -150,7 +150,7 @@ final class ApprovalServer: ObservableObject {
                 id: id,
                 timestamp: Date(),
                 command: req.command,
-                source: req.source ?? "Claude Code",
+                source: req.source ?? IPCProtocol.defaultSource,
                 cwd: req.cwd,
                 ruleName: matched.name,
                 rulePattern: matched.pattern,

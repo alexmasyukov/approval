@@ -10,12 +10,7 @@ import Foundation
 import Darwin
 
 enum UnixSocket {
-    static let socketPath: String = {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let dir = appSupport.appendingPathComponent("approval", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("approval.sock").path
-    }()
+    static var socketPath: String { AppPaths.socketPath }
 
     /// Заполняет sockaddr_un по пути; возвращает корректный socklen_t.
     static func makeAddr(path: String) -> (sockaddr_un, socklen_t) {

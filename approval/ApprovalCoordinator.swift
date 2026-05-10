@@ -33,7 +33,7 @@ final class ApprovalCoordinator: NSObject, ObservableObject {
         }
 
         let category = UNNotificationCategory(
-            identifier: "COMMAND_APPROVAL",
+            identifier: NotificationConstants.categoryID,
             actions: [],
             intentIdentifiers: [],
             options: [.customDismissAction]
@@ -65,7 +65,7 @@ final class ApprovalCoordinator: NSObject, ObservableObject {
     }
 
     private func sendNotification(for cmd: PendingCommand) {
-        let verbose = UserDefaults.standard.object(forKey: "verboseNotifications") as? Bool ?? true
+        let verbose = UserDefaults.standard.object(forKey: DefaultsKeys.verboseNotifications) as? Bool ?? true
 
         let content = UNMutableNotificationContent()
         if verbose {
@@ -75,7 +75,7 @@ final class ApprovalCoordinator: NSObject, ObservableObject {
             content.title = "Approval"
             content.body = "Требуется подтверждение"
         }
-        content.categoryIdentifier = "COMMAND_APPROVAL"
+        content.categoryIdentifier = NotificationConstants.categoryID
         content.sound = .default
         content.interruptionLevel = .timeSensitive
         content.userInfo = [
@@ -132,9 +132,7 @@ final class ApprovalCoordinator: NSObject, ObservableObject {
     }
 
     func openNotificationSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
-            NSWorkspace.shared.open(url)
-        }
+        NSWorkspace.shared.open(SystemURLs.notificationSettings)
     }
 }
 

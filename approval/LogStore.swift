@@ -44,10 +44,7 @@ final class LogStore: ObservableObject {
     private let maxEntries = 100
 
     init() {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let dir = appSupport.appendingPathComponent("approval", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        self.fileURL = dir.appendingPathComponent("log.json")
+        self.fileURL = AppPaths.logFileURL
 
         if let data = try? Data(contentsOf: fileURL) {
             let decoder = JSONDecoder()

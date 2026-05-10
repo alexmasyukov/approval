@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct GeneralSettingsView: View {
-    @AppStorage("verboseNotifications") private var verboseNotifications: Bool = true
+    @AppStorage(DefaultsKeys.verboseNotifications) private var verboseNotifications: Bool = true
 
     var body: some View {
         Form {

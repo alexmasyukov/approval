@@ -10,7 +10,7 @@ import Foundation
 import Darwin
 
 enum HookHandler {
-    private static let timeoutSeconds: Int = 600
+    private static var timeoutSeconds: Int { IPCProtocol.hookTimeoutSeconds }
 
     static func run() -> Never {
         guard let stdinData = readStdin() else {
@@ -35,7 +35,7 @@ enum HookHandler {
         let payload: [String: String] = [
             "command": command,
             "cwd": input.cwd ?? "",
-            "source": "Claude Code"
+            "source": IPCProtocol.defaultSource
         ]
         guard let payloadData = try? JSONSerialization.data(withJSONObject: payload) else {
             exit(0)
