@@ -21,8 +21,7 @@ final class ModelsTests: XCTestCase {
             id: UUID().uuidString,
             name: "Test",
             pattern: "DROP\\s+TABLE",
-            enabled: true,
-            builtin: false
+            enabled: true
         )
         let data = try JSONEncoder().encode(original)
         let decoded = try JSONDecoder().decode(Rule.self, from: data)
@@ -33,8 +32,8 @@ final class ModelsTests: XCTestCase {
         let original = RulesConfig(
             mode: .validate,
             rules: [
-                Rule(name: "A", pattern: "a", enabled: true, builtin: true),
-                Rule(name: "B", pattern: "b", enabled: false, builtin: false),
+                Rule(name: "A", pattern: "a", enabled: true),
+                Rule(name: "B", pattern: "b", enabled: false),
             ]
         )
         let data = try JSONEncoder().encode(original)
@@ -42,11 +41,10 @@ final class ModelsTests: XCTestCase {
         XCTAssertEqual(decoded, original)
     }
 
-    func test_defaultConfig_hasBuiltinRulesEnabledInValidateMode() {
+    func test_defaultConfig_hasRulesEnabledInValidateMode() {
         let cfg = RulesConfig.defaultConfig
         XCTAssertEqual(cfg.mode, .validate)
         XCTAssertFalse(cfg.rules.isEmpty)
-        XCTAssertTrue(cfg.rules.allSatisfy { $0.builtin })
         XCTAssertTrue(cfg.rules.allSatisfy { $0.enabled })
     }
 

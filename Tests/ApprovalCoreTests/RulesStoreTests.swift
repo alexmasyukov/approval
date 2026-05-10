@@ -123,7 +123,7 @@ final class RulesStoreTests: XCTestCase {
     func test_loadFromExistingFile() throws {
         let custom = RulesConfig(
             mode: .passThrough,
-            rules: [Rule(name: "Only", pattern: "test", enabled: true, builtin: false)]
+            rules: [Rule(name: "Only", pattern: "test", enabled: true)]
         )
         let (store, _) = try makeTempStore(custom)
         XCTAssertEqual(store.config.mode, .passThrough)

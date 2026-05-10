@@ -137,7 +137,6 @@ final class L10n: ObservableObject {
         "rules.section.list": "Правила",
         "rules.section.file": "Файл с правилами",
         "rules.add_button": "Добавить правило",
-        "rules.builtin_badge": "builtin",
 
         // Add rule sheet
         "rule.new.title": "Новое правило",
@@ -260,7 +259,6 @@ final class L10n: ObservableObject {
         "rules.section.list": "Rules",
         "rules.section.file": "Rules file",
         "rules.add_button": "Add rule",
-        "rules.builtin_badge": "builtin",
 
         // Add rule sheet
         "rule.new.title": "New rule",

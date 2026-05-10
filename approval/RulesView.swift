@@ -62,17 +62,7 @@ struct RulesView: View {
             .labelsHidden()
 
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(rule.name)
-                    if rule.builtin {
-                        Text(l10n.tr("rules.builtin_badge"))
-                            .font(.caption2)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(4)
-                    }
-                }
+                Text(rule.name)
                 Text(rule.pattern)
                     .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(.secondary)
@@ -80,14 +70,12 @@ struct RulesView: View {
 
             Spacer()
 
-            if !rule.builtin {
-                Button(role: .destructive) {
-                    store.removeRule(id: rule.id)
-                } label: {
-                    Image(systemName: "trash")
-                }
-                .buttonStyle(.borderless)
+            Button(role: .destructive) {
+                store.removeRule(id: rule.id)
+            } label: {
+                Image(systemName: "trash")
             }
+            .buttonStyle(.borderless)
         }
     }
 }
@@ -197,8 +185,7 @@ struct AddRuleSheet: View {
         onAdd(Rule(
             name: name.trimmingCharacters(in: .whitespaces),
             pattern: trimmedPattern,
-            enabled: true,
-            builtin: false
+            enabled: true
         ))
     }
 }
