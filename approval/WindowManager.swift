@@ -37,7 +37,8 @@ final class WindowManager: NSObject {
     func openWindow(for cmd: PendingCommand, onResolve: @escaping (Bool) -> Void) {
         if let existing = entries[cmd.id] {
             existing.window.makeKeyAndOrderFront(nil)
-            NSApp.activate()
+            existing.window.orderFrontRegardless()
+            Self.forceActivate()
             return
         }
 
@@ -74,9 +75,27 @@ final class WindowManager: NSObject {
         window.level = .floating
         window.delegate = self
         window.makeKeyAndOrderFront(nil)
-        NSApp.activate()
+        // orderFrontRegardless выводит окно поверх всех остальных,
+        // даже когда наше app не active — без него в macOS 14+ окно
+        // часто открывается за активным IDE/терминалом, и пользователю
+        // приходится переключаться на approval руками.
+        window.orderFrontRegardless()
+        Self.forceActivate()
 
         entries[cmd.id] = entry
+    }
+
+    /// macOS 14 намеренно ослабил `NSApp.activate()` — он больше не
+    /// пробивает фокус другого активного app, чтобы избежать
+    /// focus stealing. Для нас это критично: пользователь нажал
+    /// опасную команду, нам нужно немедленно дать ему окно с
+    /// фокусом и работающими ⏎/⎋. Единственный надёжный API,
+    /// который это делает — `NSRunningApplication.current.activate`
+    /// с опцией `.activateAllWindows`. Если ничего не сработает,
+    /// fallback'имся на старый `activate(ignoringOtherApps:)` —
+    /// он deprecated в macOS 14, но в SDK ещё работает.
+    private static func forceActivate() {
+        NSRunningApplication.current.activate(options: [.activateAllWindows])
     }
 
     func closeWindow(id: String) {
