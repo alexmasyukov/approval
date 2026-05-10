@@ -161,10 +161,21 @@ final class L10n: ObservableObject {
         "settings.section.notifications": "Оповещения",
         "settings.section.preview": "Превью",
         "settings.section.language": "Язык интерфейса",
+        "settings.section.appearance": "Иконки приложения",
         "settings.verbose_toggle": "Подробные оповещения",
         "settings.verbose_on": "Полный заголовок и описание в системном уведомлении.",
         "settings.verbose_off": "Минимальный заголовок и короткое тело.",
         "settings.language.label": "Язык",
+        "settings.menubar.toggle": "Показывать в строке меню",
+        "settings.menubar.description": "Иконка-щит в верхней строке macOS. Клик открывает приложение и показывает количество ожидающих запросов.",
+        "settings.dock.toggle": "Скрыть иконку в Dock",
+        "settings.dock.description": "Приложение продолжит работать в фоне (LSUIElement). Доступ — через строку меню.",
+        "settings.dock.requires_menubar": "Сначала включи строку меню — иначе доступ к приложению пропадёт.",
+
+        // Menu bar
+        "menubar.open": "Открыть approval",
+        "menubar.quit": "Выйти",
+        "menubar.pending_count": "Ожидают подтверждения: %@",
 
         // Notification body (verbose / minimal)
         "notif.verbose.title": "⚠️ Запрос на подтверждение опасной команды",
@@ -273,10 +284,21 @@ final class L10n: ObservableObject {
         "settings.section.notifications": "Notifications",
         "settings.section.preview": "Preview",
         "settings.section.language": "Interface language",
+        "settings.section.appearance": "App icons",
         "settings.verbose_toggle": "Verbose notifications",
         "settings.verbose_on": "Full title and body in the system notification.",
         "settings.verbose_off": "Minimal title and short body.",
         "settings.language.label": "Language",
+        "settings.menubar.toggle": "Show in menu bar",
+        "settings.menubar.description": "Shield icon in the macOS top bar. Click to open the app; shows the number of pending requests.",
+        "settings.dock.toggle": "Hide Dock icon",
+        "settings.dock.description": "App keeps running in the background (LSUIElement). Access it via the menu bar.",
+        "settings.dock.requires_menubar": "Enable the menu bar first — otherwise you'll lose access to the app.",
+
+        // Menu bar
+        "menubar.open": "Open approval",
+        "menubar.quit": "Quit",
+        "menubar.pending_count": "Pending: %@",
 
         // Notification body (verbose / minimal)
         "notif.verbose.title": "⚠️ Dangerous command requires confirmation",

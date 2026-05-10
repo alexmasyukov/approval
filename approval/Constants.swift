@@ -48,6 +48,13 @@ enum DefaultsKeys {
 
     /// Идентификатор языка UI ("ru" или "en"). По умолчанию "ru".
     static let appLanguage = "appLanguage"
+
+    /// Bool. Показывать ли иконку в строке меню (menu bar). По умолчанию false.
+    static let showInMenuBar = "showInMenuBar"
+
+    /// Bool. Скрывать ли иконку в Dock (через `.accessory` activation policy).
+    /// По умолчанию false.
+    static let hideDockIcon = "hideDockIcon"
 }
 
 // MARK: - System URLs
