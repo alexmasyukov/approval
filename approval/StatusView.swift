@@ -10,6 +10,7 @@ struct StatusView: View {
     @EnvironmentObject var server: ApprovalServer
     @EnvironmentObject var pending: PendingStore
     @EnvironmentObject var store: RulesStore
+    @EnvironmentObject var log: LogStore
 
     var body: some View {
         Form {
@@ -122,7 +123,7 @@ struct StatusView: View {
             Паттерн: \(matched.pattern)
             """
         )
-        LogStore.shared.append(LogEntry(
+        log.append(LogEntry(
             id: id,
             timestamp: Date(),
             command: command,
@@ -133,7 +134,7 @@ struct StatusView: View {
             decision: .pending,
             resolvedAt: nil
         ))
-        PendingStore.shared.add(cmd) { _ in }
+        pending.add(cmd) { _ in }
         coordinator.requestApproval(for: cmd)
     }
 }

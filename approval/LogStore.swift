@@ -82,6 +82,13 @@ final class LogStore: ObservableObject {
         flushNow()
     }
 
+    /// Синхронная запись текущего состояния. Вызывать из
+    /// applicationWillTerminate, чтобы не потерять последний batch.
+    func flushSync() {
+        pendingSave?.cancel()
+        Self.writeToDisk(entries: entries, url: fileURL)
+    }
+
     var logFilePath: String {
         fileURL.path
     }
