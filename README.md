@@ -49,6 +49,7 @@ If `approval` isn't running, the hook fails open with a warning to stderr — yo
 - **Two modes** — *Validate & notify* (default) and *Pass-through* (for when you don't want to be interrupted; a bright red banner reminds you it's on).
 - **Per-request detail window** — every notification opens its own native window. You can have multiple pending approvals, decide them in any order, and they don't block your other work.
 - **Verbose / minimal notifications** — a toggle in *Settings*. Verbose shows full title and body; minimal is one short line.
+- **Direct-confirmation mode** — toggle in *Settings → Notifications*. Skips the system notification entirely and opens the request window immediately, activating the app to the foreground. Handy when you're at the keyboard and want one click instead of *click banner → click button*.
 - **Activity log** — last 100 filtered requests with timestamp, matched rule, decision (approved / denied / pending). Click "Open folder" to find the JSON file.
 - **🇷🇺 Russian + 🇬🇧 English UI** — switchable from *Settings → Interface language*. Applies instantly without restart, including the install instructions.
 - **Menu bar icon (optional)** — a `staroflife.fill` lives in the menu bar with a count of pending requests; switches to a red `exclamationmark.triangle.fill` when something needs your attention. Toggleable.
@@ -126,7 +127,7 @@ See `REFACTORING.md` for what's planned to be cleaned up before v1.0.
 - [ ] Sparkle-based auto-update
 - [x] Menu bar mode (no Dock icon)
 - [x] English UI localization
-- [x] Tests (42 unit tests via `swift test`)
+- [x] Tests (49 unit tests via `swift test`)
 - [ ] Re-enable App Sandbox with proper entitlements
 
 ---
@@ -145,4 +146,4 @@ Issues and PRs welcome. The codebase is small (~1.5k LOC of Swift) and easy to r
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift test
 ```
 
-42 unit tests covering `MarkdownParser`, `RulesStore` (rule matching, persistence, corruption recovery), `LogStore` (ring buffer, sync flush, codable round-trips), and the data models. Run in <20 ms.
+49 unit tests covering `MarkdownParser`, `RulesStore` (rule matching, persistence, corruption recovery), `LogStore` (ring buffer, sync flush, codable round-trips), `PendingStore` (add/resolve/idempotence), and the data models. Run in <20 ms.
