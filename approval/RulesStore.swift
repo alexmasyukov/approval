@@ -19,20 +19,28 @@ final class RulesStore: ObservableObject {
     init(fileURL: URL) {
         self.fileURL = fileURL
 
-        if let data = try? Data(contentsOf: fileURL),
-           let cfg = try? JSONDecoder().decode(RulesConfig.self, from: data) {
-            self.config = cfg
-        } else {
-            self.config = .defaultConfig
-            Self.persist(self.config, to: fileURL)
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            do {
+                let data = try Data(contentsOf: fileURL)
+                self.config = try JSONDecoder().decode(RulesConfig.self, from: data)
+                return
+            } catch {
+                print("RulesStore: failed to load \(fileURL.path) (\(error)); using defaults")
+                // Fallthrough на дефолт + перезапись.
+            }
         }
+        self.config = .defaultConfig
+        Self.persist(self.config, to: fileURL)
     }
 
     private static func persist(_ config: RulesConfig, to url: URL) {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        if let data = try? encoder.encode(config) {
-            try? data.write(to: url, options: .atomic)
+        do {
+            let data = try encoder.encode(config)
+            try data.write(to: url, options: .atomic)
+        } catch {
+            print("RulesStore: persist failed: \(error)")
         }
     }
 
@@ -43,7 +51,11 @@ final class RulesStore: ObservableObject {
     func evaluate(command: String) -> Rule? {
         if config.mode == .passThrough { return nil }
         for rule in config.rules where rule.enabled {
-            guard let regex = try? NSRegularExpression(pattern: rule.pattern, options: [.caseInsensitive]) else {
+            let regex: NSRegularExpression
+            do {
+                regex = try NSRegularExpression(pattern: rule.pattern, options: [.caseInsensitive])
+            } catch {
+                print("RulesStore: invalid regex in rule '\(rule.name)' [\(rule.pattern)]: \(error); skipping")
                 continue
             }
             let range = NSRange(command.startIndex..<command.endIndex, in: command)

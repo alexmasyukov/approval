@@ -136,4 +136,33 @@ final class RulesStoreTests: XCTestCase {
         XCTAssertEqual(store.config.mode, .validate)
         XCTAssertFalse(store.config.rules.isEmpty)
     }
+
+    // MARK: - Robustness
+
+    func test_evaluate_badRegexInRuleSkipped_otherRulesStillWork() throws {
+        let custom = RulesConfig(
+            mode: .validate,
+            rules: [
+                Rule(name: "broken", pattern: "[", enabled: true),         // невалидный regex
+                Rule(name: "good", pattern: "DROP\\s+TABLE", enabled: true)
+            ]
+        )
+        let (store, _) = try makeTempStore(custom)
+        // Невалидное правило не должно крашить evaluate; валидное должно срабатывать.
+        XCTAssertEqual(store.evaluate(command: "DROP TABLE x")?.name, "good")
+    }
+
+    func test_corruptedRulesFile_fallsBackToDefaults() throws {
+        let tmp = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("approval-test-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        let url = tmp.appendingPathComponent("rules.json")
+        // Записываем мусор вместо валидного JSON.
+        try "not json at all".write(to: url, atomically: true, encoding: .utf8)
+
+        let store = RulesStore(fileURL: url)
+        // Должно загрузиться как default + перезаписаться.
+        XCTAssertEqual(store.config.mode, .validate)
+        XCTAssertFalse(store.config.rules.isEmpty)
+    }
 }
