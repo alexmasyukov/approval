@@ -42,7 +42,7 @@ playground.xcworkspace
 .swiftpm/
 Packages/
 Package.pins
-# Package.resolved обычно коммитится для приложений — оставляем
+Package.resolved
 
 # ----- CocoaPods -----
 Pods/

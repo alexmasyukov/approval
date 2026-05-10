@@ -14,8 +14,12 @@ final class RulesStore: ObservableObject {
 
     private let fileURL: URL
 
-    init() {
-        self.fileURL = AppPaths.rulesFileURL
+    convenience init() {
+        self.init(fileURL: AppPaths.rulesFileURL)
+    }
+
+    init(fileURL: URL) {
+        self.fileURL = fileURL
 
         if let data = try? Data(contentsOf: fileURL),
            let cfg = try? JSONDecoder().decode(RulesConfig.self, from: data) {

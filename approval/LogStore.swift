@@ -46,8 +46,12 @@ final class LogStore: ObservableObject {
     private var pendingSave: DispatchWorkItem?
     private let saveDebounceMs = 500
 
-    init() {
-        self.fileURL = AppPaths.logFileURL
+    convenience init() {
+        self.init(fileURL: AppPaths.logFileURL)
+    }
+
+    init(fileURL: URL) {
+        self.fileURL = fileURL
 
         if let data = try? Data(contentsOf: fileURL) {
             let decoder = JSONDecoder()
@@ -77,9 +81,10 @@ final class LogStore: ObservableObject {
 
     func clear() {
         entries.removeAll()
-        // Очистку сохраняем сразу, без debounce, чтобы файл не уехал
-        // обратно при следующей записи если юзер закроет приложение.
-        flushNow()
+        // Очистку и applicationWillTerminate пишем синхронно: cancel
+        // pending debounce + сразу writeToDisk. Иначе файл может уехать
+        // обратно асинхронным write'ом, или процесс выйдет до завершения.
+        flushSync()
     }
 
     /// Синхронная запись текущего состояния. Вызывать из
@@ -106,16 +111,7 @@ final class LogStore: ObservableObject {
         saveQueue.asyncAfter(deadline: .now() + .milliseconds(saveDebounceMs), execute: work)
     }
 
-    private func flushNow() {
-        pendingSave?.cancel()
-        let snapshot = entries
-        let url = fileURL
-        saveQueue.async {
-            Self.writeToDisk(entries: snapshot, url: url)
-        }
-    }
-
-    private static func writeToDisk(entries: [LogEntry], url: URL) {
+    private nonisolated static func writeToDisk(entries: [LogEntry], url: URL) {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
