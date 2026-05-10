@@ -102,9 +102,15 @@ private struct MenuBarLabel: View {
     @ObservedObject var pending: PendingStore
 
     var body: some View {
-        Image(systemName: pending.pending.isEmpty
-              ? "checkmark.shield"
-              : "exclamationmark.shield")
+        if pending.pending.isEmpty {
+            Image(systemName: "staroflife")
+        } else {
+            // Принудительный красный — чтобы заметно «прыгало» в menu bar.
+            // Template-режим тут отключается: иконка не будет адаптироваться
+            // к тёмной/светлой теме, но при pending это и нужно — внимание.
+            Image(systemName: "staroflife.fill")
+                .foregroundStyle(.red)
+        }
     }
 }
 
