@@ -98,6 +98,9 @@ final class L10n: ObservableObject {
         "status.notifications.status": "Статус",
         "status.notifications.refresh": "Обновить статус",
         "status.notifications.open_settings": "Открыть настройки уведомлений",
+        "status.test.drop": "Тест: DROP TABLE users",
+        "status.test.rm": "Тест: rm -rf /tmp/foo",
+        "status.test.select": "Тест: SELECT (безопасно)",
         "status.passthrough.banner_title": "Режим «Без проверки» включён",
         "status.passthrough.banner_message": "Все команды Claude Code проходят без проверки. Не забудь переключить обратно в «С проверкой и оповещениями».",
 
@@ -207,6 +210,9 @@ final class L10n: ObservableObject {
         "status.notifications.status": "Status",
         "status.notifications.refresh": "Refresh status",
         "status.notifications.open_settings": "Open notification settings",
+        "status.test.drop": "Test: DROP TABLE users",
+        "status.test.rm": "Test: rm -rf /tmp/foo",
+        "status.test.select": "Test: SELECT (safe)",
         "status.passthrough.banner_title": "Pass-through mode is on",
         "status.passthrough.banner_message": "All Claude Code commands run without confirmation. Don't forget to switch back to «Validate & notify».",
 

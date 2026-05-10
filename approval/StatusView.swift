@@ -53,13 +53,13 @@ struct StatusView: View {
 
             #if DEBUG
             Section(l10n.tr("status.section.test") + " (DEBUG)") {
-                Button("Тест: DROP TABLE users") {
+                Button(l10n.tr("status.test.drop")) {
                     fireLocal(command: "DROP TABLE users; DROP TABLE orders;")
                 }
-                Button("Тест: rm -rf /tmp/foo") {
+                Button(l10n.tr("status.test.rm")) {
                     fireLocal(command: "rm -rf /tmp/foo")
                 }
-                Button("Тест: SELECT (безопасно)") {
+                Button(l10n.tr("status.test.select")) {
                     fireLocal(command: "SELECT * FROM users LIMIT 10")
                 }
             }

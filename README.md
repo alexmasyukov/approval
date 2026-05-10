@@ -46,10 +46,11 @@ If `approval` isn't running, the hook fails open with a warning to stderr — yo
 
 - **Built-in danger rules** — `DROP TABLE/DATABASE`, `TRUNCATE`, `DELETE FROM ... ;`, `rm -rf`, `psql/mysql -c "..."`, `ALTER TABLE ... DROP COLUMN`, MongoDB `.drop()/.dropDatabase()`, Redis `FLUSHALL/FLUSHDB`.
 - **Custom rules** — add your own regex patterns through a native form. Each rule has a name, a pattern, an on/off switch, and lives in a JSON file you can edit by hand.
-- **Two modes** — *С проверкой и оповещениями* (default) and *Без проверки* (pass-through, for when you don't want to be interrupted; a bright red banner reminds you it's on).
+- **Two modes** — *Validate & notify* (default) and *Pass-through* (for when you don't want to be interrupted; a bright red banner reminds you it's on).
 - **Per-request detail window** — every notification opens its own native window. You can have multiple pending approvals, decide them in any order, and they don't block your other work.
 - **Verbose / minimal notifications** — a toggle in *Settings*. Verbose shows full title and body; minimal is one short line.
 - **Activity log** — last 100 filtered requests with timestamp, matched rule, decision (approved / denied / pending). Click "Open folder" to find the JSON file.
+- **🇷🇺 Russian + 🇬🇧 English UI** — switchable from *Settings → Interface language*. Applies instantly without restart, including the install instructions.
 - **macOS Settings.app look** — `Form { Section { ... } }.formStyle(.grouped)`, `LabeledContent`, `NavigationSplitView` with sidebar. Native, not a web view.
 
 ---
@@ -68,7 +69,7 @@ open approval.xcodeproj
 
 In Xcode → ⌘R.
 
-Then open the **Установка хука** tab inside the app — it shows the exact JSON to paste into `~/.claude/settings.json`, with the absolute path to the binary already filled in. Restart Claude Code, and you're done.
+Then open the **Install hook** tab inside the app — it shows the exact JSON to paste into `~/.claude/settings.json`, with the absolute path to the binary already filled in. Restart Claude Code, and you're done.
 
 ---
 
@@ -122,8 +123,8 @@ See `REFACTORING.md` for what's planned to be cleaned up before v1.0.
 - [ ] Signed DMG release on GitHub Releases
 - [ ] Sparkle-based auto-update
 - [ ] Menu bar mode (no Dock icon)
-- [ ] English UI localization
-- [ ] Tests
+- [x] English UI localization
+- [x] Tests (42 unit tests via `swift test`)
 - [ ] Re-enable App Sandbox with proper entitlements
 
 ---
@@ -134,4 +135,12 @@ MIT — see [LICENSE](LICENSE) (TBD).
 
 ## Contributing
 
-Issues and PRs welcome. The codebase is small (~1k LOC of Swift) and easy to read top-to-bottom.
+Issues and PRs welcome. The codebase is small (~1.5k LOC of Swift) and easy to read top-to-bottom.
+
+### Running tests
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift test
+```
+
+42 unit tests covering `MarkdownParser`, `RulesStore` (rule matching, persistence, corruption recovery), `LogStore` (ring buffer, sync flush, codable round-trips), and the data models. Run in <20 ms.
