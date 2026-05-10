@@ -4,6 +4,8 @@
 
 Все пункты — **без изменения внешнего поведения** (фичи в отдельной секции «Не рефакторинг»).
 
+> **Прогресс на 2026-05-10:** P0.2, P0.3, P1.4, P1.6 (частично), P1.7, P1.8, P2.9, P3.13 — закрыто. Подробный список — в самом низу.
+
 ---
 
 ## P0 — критично, мешает дальше работать
@@ -184,3 +186,28 @@
 - **P3** — после релиза, в v1.1+.
 
 Каждый пункт — самостоятельный PR.
+
+---
+
+## Что уже закрыто
+
+| Пункт | Коммит | Что сделано |
+|---|---|---|
+| **P0.2** Singletons → DI | `5bdcffe` | `AppContainer` собирает граф; нет `static let shared`; зависимости через init |
+| **P0.3** Magic strings | `105af62` | `Constants.swift`: `AppPaths`, `NotificationConstants`, `DefaultsKeys`, `SystemURLs`, `IPCProtocol` |
+| **P1.4** Split `ContentView` | `12491c3` | `AppSection.swift` + `StatusView.swift` отдельно |
+| **P1.6** Error handling (частично) | `ceb89c5` | RulesStore: corrupt JSON → fallback с логом; bad regex → skip rule + лог; persist errors caught |
+| **P1.7** Async log writes | `6f62fe1` | Debounced 500мс на dedicated DispatchQueue; `flushSync` для clear/terminate |
+| **P1.8** Pending request timeout | `6f62fe1` | Server-side auto-deny через `hookTimeoutSeconds + 60` |
+| **P2.9** Split ApprovalCoordinator | `edc5681` | `NotificationClient` + `WindowManager` + slim Coordinator |
+| **P3.13** Тесты | `a889305`, `ceb89c5` | 42 unit-теста через SwiftPM, охватывают MarkdownParser/Models/RulesStore/LogStore |
+
+## Что остаётся (приоритеты не менялись)
+
+- **P0.1** ApprovalServer concurrency cleanup — static + nonisolated через `server` параметр всё ещё есть. Можно ещё чище через actor-based design, но риск регрессии без integration-тестов на сокет.
+- **P1.5** Локализация — это новая фича (xcstrings + .lproj), не рефакторинг.
+- **P2.10** MarkdownParser limitations — не блокирует, можно swift-markdown подтянуть когда понадобится.
+- **P2.11** DEBUG-flag для тестовых кнопок — продуктовое решение, не делаю без явной просьбы.
+- **P2.12** Унификация warning UI — пока единственная плашка (pass-through banner), извлечение преждевременное.
+- **P3.14** Concurrency cleanup — связано с P0.1.
+- **P3.15** Проверки целостности при старте — новая фича.
