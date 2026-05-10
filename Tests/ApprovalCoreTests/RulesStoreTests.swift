@@ -79,11 +79,17 @@ final class RulesStoreTests: XCTestCase {
 
     // MARK: - persistence
 
+    // Все persistence-тесты ниже после мутации делают `flushSync()`,
+    // потому что мутации (addRule, toggleRule, setMode и т.д.)
+    // используют debounced async save — без явного flush файл может
+    // ещё не быть записан к моменту перезагрузки во второй стор.
+
     func test_addRule_persistsToFile() throws {
         let (store, url) = try makeTempStore()
         let initial = store.config.rules.count
         store.addRule(Rule(name: "Custom", pattern: "WIBBLE\\s+WOBBLE", enabled: true))
         XCTAssertEqual(store.config.rules.count, initial + 1)
+        store.flushSync()
 
         // Перезагружаем стор с того же файла — правило должно быть на месте.
         let store2 = RulesStore(fileURL: url)
@@ -95,6 +101,7 @@ final class RulesStoreTests: XCTestCase {
         let rule = Rule(name: "ToRemove", pattern: "x", enabled: true)
         store.addRule(rule)
         store.removeRule(id: rule.id)
+        store.flushSync()
 
         let store2 = RulesStore(fileURL: url)
         XCTAssertFalse(store2.config.rules.contains { $0.id == rule.id })
@@ -106,6 +113,7 @@ final class RulesStoreTests: XCTestCase {
             XCTFail("default config should have rules"); return
         }
         store.toggleRule(id: id)
+        store.flushSync()
 
         let store2 = RulesStore(fileURL: url)
         let reloaded = store2.config.rules.first { $0.id == id }
@@ -115,6 +123,7 @@ final class RulesStoreTests: XCTestCase {
     func test_setMode_persists() throws {
         let (store, url) = try makeTempStore()
         store.setMode(.passThrough)
+        store.flushSync()
 
         let store2 = RulesStore(fileURL: url)
         XCTAssertEqual(store2.config.mode, .passThrough)

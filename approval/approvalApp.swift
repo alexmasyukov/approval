@@ -59,6 +59,7 @@ final class AppContainer {
     }
 
     func shutdown() {
+        rules.flushSync()
         log.flushSync()
         server.stop()
     }

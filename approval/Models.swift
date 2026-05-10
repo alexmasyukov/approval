@@ -12,7 +12,7 @@ struct PendingCommand: Equatable, Identifiable, Codable {
     let reason: String
 }
 
-enum AppMode: String, Codable, CaseIterable, Identifiable {
+nonisolated enum AppMode: String, Codable, CaseIterable, Identifiable {
     // Канонические идентификаторы (внутренние и в JSON) — оставляем
     // английскими: validate / pass_through. На UI показываем label.
     case validate
@@ -34,7 +34,11 @@ enum AppMode: String, Codable, CaseIterable, Identifiable {
 // неизвестные ключи, поэтому старые rules.json с `"builtin": true`
 // декодируются без ошибок и теряют это поле при следующей записи.
 // Down-grade на старую версию приведёт к потере built-in-меток.
-struct Rule: Identifiable, Codable, Equatable, Hashable {
+//
+// nonisolated: декодим/энкодим JSON на background queue в RulesStore,
+// поэтому ни сам тип, ни его Codable/Equatable conformance не должны
+// быть привязаны к MainActor.
+nonisolated struct Rule: Identifiable, Codable, Equatable, Hashable {
     var id: String
     var name: String
     var pattern: String
@@ -48,7 +52,9 @@ struct Rule: Identifiable, Codable, Equatable, Hashable {
     }
 }
 
-struct RulesConfig: Codable, Equatable {
+// nonisolated: пишем JSON на background queue в RulesStore.scheduleSave,
+// поэтому Codable conformance не должен быть привязан к MainActor.
+nonisolated struct RulesConfig: Codable, Equatable {
     var mode: AppMode
     var rules: [Rule]
 
