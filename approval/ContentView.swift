@@ -67,6 +67,33 @@ struct StatusView: View {
 
     var body: some View {
         Form {
+            if store.config.mode == .passThrough {
+                Section {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.title)
+                            .foregroundStyle(.red)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Режим «Без проверки» включён")
+                                .font(.headline)
+                                .foregroundStyle(.red)
+                            Text("Все команды Claude Code проходят без проверки. Не забудь переключить обратно в «С проверкой и оповещениями».")
+                                .font(.callout)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                }
+                .listRowBackground(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.red.opacity(0.12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.red, lineWidth: 2)
+                        )
+                )
+            }
+
             Section("Сервер") {
                 LabeledContent("Состояние") {
                     HStack(spacing: 6) {
@@ -83,7 +110,7 @@ struct StatusView: View {
                 }
             }
 
-            Section("Режим работы") {
+            Section {
                 Picker("Режим", selection: Binding(
                     get: { store.config.mode },
                     set: { store.setMode($0) }
@@ -94,15 +121,16 @@ struct StatusView: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-
+            } header: {
                 if store.config.mode == .passThrough {
-                    Label("Все команды проходят без проверки", systemImage: "exclamationmark.triangle.fill")
+                    Text("Режим работы")
                         .foregroundStyle(.red)
-                        .font(.callout.bold())
+                } else {
+                    Text("Режим работы")
                 }
             }
 
-            Section("Уведомления") {
+            Section("Уведомления MacOS") {
                 LabeledContent("Статус", value: coordinator.authStatus)
                 Button("Обновить статус") { coordinator.refreshAuthStatus() }
                 Button("Открыть настройки уведомлений") { coordinator.openNotificationSettings() }

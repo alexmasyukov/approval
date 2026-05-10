@@ -13,6 +13,8 @@ struct PendingCommand: Equatable, Identifiable, Codable {
 }
 
 enum AppMode: String, Codable, CaseIterable, Identifiable {
+    // Канонические идентификаторы (внутренние и в JSON) — оставляем
+    // английскими: validate / pass_through. На UI показываем label.
     case validate
     case passThrough = "pass_through"
 
@@ -20,8 +22,8 @@ enum AppMode: String, Codable, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .validate: return "Validate"
-        case .passThrough: return "Pass-through"
+        case .validate:   return "С проверкой и оповещениями"
+        case .passThrough: return "Без проверки"
         }
     }
 }
