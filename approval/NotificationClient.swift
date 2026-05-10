@@ -33,9 +33,12 @@ final class NotificationClient: NSObject, ObservableObject {
     func setup() {
         let center = UNUserNotificationCenter.current()
         center.delegate = self
-        // .timeSensitive — иначе macOS даунгрейдит interruptionLevel
-        // до .active и нотификация может задерживаться Focus-режимом.
-        center.requestAuthorization(options: [.alert, .sound, .badge, .timeSensitive]) { [weak self] granted, error in
+        // .timeSensitive здесь не запрашиваем: для него нужен restricted
+        // entitlement com.apple.developer.usernotifications.time-sensitive,
+        // который Apple выдаёт только зарегистрированным App ID. Без него
+        // macOS всё равно даунгрейдит уровень до .active — поэтому честнее
+        // сразу использовать .active и не врать пользователю.
+        center.requestAuthorization(options: [.alert, .sound, .badge]) { [weak self] granted, error in
             DispatchQueue.main.async {
                 if let error = error {
                     self?.lastError = "Ошибка авторизации: \(error.localizedDescription)"
@@ -89,7 +92,7 @@ final class NotificationClient: NSObject, ObservableObject {
         }
         content.categoryIdentifier = NotificationConstants.categoryID
         content.sound = .default
-        content.interruptionLevel = .timeSensitive
+        content.interruptionLevel = .active
         content.userInfo = [
             "source": cmd.source,
             "command": cmd.command,

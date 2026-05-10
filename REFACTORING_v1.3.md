@@ -2,6 +2,9 @@
 
 Fresh assessment after the v1.3.0 release (font-scale in detail window, direct-confirmation mode, X-as-cancel, swapped button colors). The original `REFACTORING.md` is the historical roadmap up to v1.0 — most of its items are done. This document focuses on what's worth fixing **now**, in the post-v1.0 state.
 
+> **Status update (v1.3.1 cycle):**
+> Issues #1, #2, and #5 have been addressed. See [Done in v1.3.1](#done-in-v131) at the bottom for the actual diff each one became.
+
 ---
 
 ## Executive summary
@@ -327,6 +330,19 @@ Create `IPCIntegrationTests.swift` that binds an `ApprovalServer` to a temp sock
 Pick one. If keeping: create `approval/approval.entitlements` with the key, wire `CODE_SIGN_ENTITLEMENTS` in `project.pbxproj`. If dropping: change `.timeSensitive` to `.active` in both spots in `NotificationClient.swift` and document the reason. The current state — requesting a level that's silently downgraded — is the worst of both worlds.
 
 **Unblocks:** Issue #5; closes the gap between the README's promise and the actual behaviour under Focus mode.
+
+---
+
+## Done in v1.3.1
+
+- **#1 (P0) WindowManager double-resolve race** — collapsed `didResolve` flag into atomic `entries.removeValue(forKey:)` inside `wrappedResolve`. `windowWillClose` now also uses `removeValue` and exits if the entry was already removed by an explicit Approve/Cancel. Single source of truth: presence in the dictionary == "still pending."
+- **#2 (P1) IPC observability** — `ApprovalServer.sendResponse` now captures the `writeLine` boolean and logs failures via `os.Logger(subsystem: "com.alexmasyukov.approval", category: "ipc")` with errno text. Encoding failures also logged separately. Behaviour unchanged (hook still falls open via timeout) — only visibility added.
+- **#5 (P1) `.timeSensitive`** — opted to drop the request rather than fake the entitlement. macOS was silently downgrading to `.active` anyway because `com.apple.developer.usernotifications.time-sensitive` is a restricted entitlement requiring an Apple-approved App ID. Both the auth options and `content.interruptionLevel` now use `.active`. Comment in `NotificationClient.swift` documents why.
+- **Bonus — Xcode warnings cleanup** — replaced deprecated `NSApp.activate(ignoringOtherApps: true)` and `NSRunningApplication.activate(options:)` with their no-arg equivalents; added `nonisolated` to `CheckRequest`, `UnixSocket` static methods and the `ipcLog` constant so they don't conflict with the project's MainActor default isolation; resized `icon_512x512@2x.png` from 2048×2048 to the correct 1024×1024.
+
+Tried but reverted: a `UnixSocketTests.swift` file with `socketpair()`-based round-trip tests. The EOF and write-to-closed-peer tests turned out to be flaky on macOS 26 — they hung the test process indefinitely. The full IPC integration test (#9-rest) still wants a different approach: either moving `ApprovalServer`/`HookHandler` into the SPM target, or adding an XCTest target inside the xcodeproj.
+
+Still open: #3 (accept-loop strong refs), #4 (PendingStore.resolve returning Bool), #6 (RulesStore async save), #7 (SettingsStore extraction), #8 (Models migration comment), #9-rest, #10 (test buttons framing), #11 (xcstrings), #12 (concurrency cleanup), #13 (signing/DMG).
 
 ---
 

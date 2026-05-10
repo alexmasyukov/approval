@@ -60,7 +60,7 @@ final class ApprovalCoordinator: ObservableObject {
         let direct = UserDefaults.standard.bool(forKey: DefaultsKeys.directConfirmation)
         if direct {
             openDetailWindow(for: cmd)
-            NSApp.activate(ignoringOtherApps: true)
+            NSApp.activate()
         } else {
             notifications.send(for: cmd)
         }

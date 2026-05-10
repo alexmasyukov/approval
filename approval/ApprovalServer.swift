@@ -10,10 +10,16 @@
 import Foundation
 import Darwin
 import Combine
+import OSLog
 
-/// Запрос от хука. Объявлен как Sendable struct, чтобы безопасно
-/// переходить с background thread на MainActor.
-struct CheckRequest: Decodable, Sendable {
+nonisolated private let ipcLog = Logger(subsystem: "com.alexmasyukov.approval", category: "ipc")
+
+/// Запрос от хука. Декодируется из JSON на background thread,
+/// затем передаётся на MainActor. Явный `nonisolated` нужен в
+/// проектах с default-MainActor-isolation, иначе Decodable
+/// conformance и сами свойства считаются main-actor-isolated и
+/// JSONDecoder из nonisolated context их не увидит.
+nonisolated struct CheckRequest: Decodable, Sendable {
     let command: String
     let cwd: String?
     let source: String?
@@ -195,8 +201,18 @@ final class ApprovalServer: ObservableObject {
 
     nonisolated private static func sendResponse(fd: Int32, approved: Bool, reason: String) {
         let payload: [String: Any] = ["approved": approved, "reason": reason]
-        if let data = try? JSONSerialization.data(withJSONObject: payload) {
-            _ = UnixSocket.writeLine(fd: fd, data: data)
+        guard let data = try? JSONSerialization.data(withJSONObject: payload) else {
+            ipcLog.error("sendResponse: failed to encode payload (approved=\(approved, privacy: .public))")
+            close(fd)
+            return
+        }
+        let ok = UnixSocket.writeLine(fd: fd, data: data)
+        if !ok {
+            // Чаще всего: хук-клиент уже закрыл свой конец (timeout, kill -9,
+            // broken pipe). Ошибка не фатальна — без ответа хук пойдёт по
+            // fail-open пути, — но без лога мы её просто не видим.
+            let err = String(cString: strerror(errno))
+            ipcLog.warning("sendResponse: writeLine failed (errno=\(errno, privacy: .public) \(err, privacy: .public))")
         }
         close(fd)
     }

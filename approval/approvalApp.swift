@@ -125,7 +125,7 @@ private struct MenuBarContent: View {
             Divider()
         }
         Button(l10n.tr("menubar.open")) {
-            NSApp.activate(ignoringOtherApps: true)
+            NSApp.activate()
             openWindow(id: "main")
         }
         Divider()
@@ -195,7 +195,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .filter { $0.processIdentifier != myPID }
         guard let existing = others.first else { return false }
 
-        existing.activate(options: [.activateIgnoringOtherApps])
+        existing.activate()
         // Откладываем terminate, чтобы applicationDidFinishLaunching
         // успел вернуться, иначе AppKit может ругаться на teardown
         // в середине запуска.
@@ -213,7 +213,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // После возврата из .accessory приложение бывает невидимым
             // в Cmd+Tab до явной активации. На старте этого делать
             // не нужно — система сама даст фокус GUI-приложению.
-            NSApp.activate(ignoringOtherApps: true)
+            NSApp.activate()
         }
     }
 }

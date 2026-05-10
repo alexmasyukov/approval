@@ -13,7 +13,7 @@ enum UnixSocket {
     static var socketPath: String { AppPaths.socketPath }
 
     /// Заполняет sockaddr_un по пути; возвращает корректный socklen_t.
-    static func makeAddr(path: String) -> (sockaddr_un, socklen_t) {
+    nonisolated static func makeAddr(path: String) -> (sockaddr_un, socklen_t) {
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
 
@@ -31,7 +31,7 @@ enum UnixSocket {
     }
 
     /// Читает из fd до символа `\n` или EOF/ошибки.
-    static func readLine(fd: Int32, maxBytes: Int = 1 << 20) -> Data? {
+    nonisolated static func readLine(fd: Int32, maxBytes: Int = 1 << 20) -> Data? {
         var buffer = Data()
         var chunk = [UInt8](repeating: 0, count: 4096)
         while buffer.count < maxBytes {
@@ -47,7 +47,7 @@ enum UnixSocket {
 
     /// Пишет данные + `\n` в fd. Возвращает true если всё записалось.
     @discardableResult
-    static func writeLine(fd: Int32, data: Data) -> Bool {
+    nonisolated static func writeLine(fd: Int32, data: Data) -> Bool {
         var payload = data
         if payload.last != 0x0A {
             payload.append(0x0A)
