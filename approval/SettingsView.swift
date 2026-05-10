@@ -9,12 +9,20 @@ struct GeneralSettingsView: View {
     @AppStorage(DefaultsKeys.verboseNotifications) private var verboseNotifications: Bool = true
     @AppStorage(DefaultsKeys.showInMenuBar) private var showInMenuBar: Bool = false
     @AppStorage(DefaultsKeys.hideDockIcon) private var hideDockIcon: Bool = false
+    @AppStorage(DefaultsKeys.directConfirmation) private var directConfirmation: Bool = false
     @EnvironmentObject var l10n: L10n
 
     var body: some View {
         Form {
             Section(l10n.tr("settings.section.notifications")) {
+                Toggle(l10n.tr("settings.direct_toggle"), isOn: $directConfirmation)
+                Text(l10n.tr("settings.direct_description"))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
                 Toggle(l10n.tr("settings.verbose_toggle"), isOn: $verboseNotifications)
+                    .disabled(directConfirmation)
                 Text(verboseNotifications
                      ? l10n.tr("settings.verbose_on")
                      : l10n.tr("settings.verbose_off"))

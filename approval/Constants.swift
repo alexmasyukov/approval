@@ -55,6 +55,10 @@ enum DefaultsKeys {
     /// Bool. Скрывать ли иконку в Dock (через `.accessory` activation policy).
     /// По умолчанию false.
     static let hideDockIcon = "hideDockIcon"
+
+    /// Bool. Если true — пропускаем системное уведомление и сразу
+    /// открываем окно подтверждения с активацией приложения. По умолчанию false.
+    static let directConfirmation = "directConfirmation"
 }
 
 // MARK: - System URLs

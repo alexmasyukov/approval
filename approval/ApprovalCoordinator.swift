@@ -14,6 +14,7 @@
 
 import Foundation
 import Combine
+import AppKit
 
 @MainActor
 final class ApprovalCoordinator: ObservableObject {
@@ -54,7 +55,15 @@ final class ApprovalCoordinator: ObservableObject {
     // MARK: - External entry points
 
     func requestApproval(for cmd: PendingCommand) {
-        notifications.send(for: cmd)
+        // Direct mode: окно сразу + активация приложения, без системного
+        // уведомления. UI-toggle в Settings → "Сразу показывать окно".
+        let direct = UserDefaults.standard.bool(forKey: DefaultsKeys.directConfirmation)
+        if direct {
+            openDetailWindow(for: cmd)
+            NSApp.activate(ignoringOtherApps: true)
+        } else {
+            notifications.send(for: cmd)
+        }
     }
 
     func resolve(id: String, approved: Bool) {
