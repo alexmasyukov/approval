@@ -13,6 +13,8 @@ final class AppContainer {
     let rules: RulesStore
     let pending: PendingStore
     let log: LogStore
+    let notifications: NotificationClient
+    let windows: WindowManager
     let coordinator: ApprovalCoordinator
     let server: ApprovalServer
 
@@ -20,7 +22,14 @@ final class AppContainer {
         let rules = RulesStore()
         let pending = PendingStore()
         let log = LogStore()
-        let coordinator = ApprovalCoordinator(pending: pending, log: log)
+        let notifications = NotificationClient()
+        let windows = WindowManager()
+        let coordinator = ApprovalCoordinator(
+            pending: pending,
+            log: log,
+            notifications: notifications,
+            windows: windows
+        )
         let server = ApprovalServer(
             rules: rules,
             pending: pending,
@@ -31,6 +40,8 @@ final class AppContainer {
         self.rules = rules
         self.pending = pending
         self.log = log
+        self.notifications = notifications
+        self.windows = windows
         self.coordinator = coordinator
         self.server = server
     }
@@ -55,6 +66,7 @@ struct approvalApp: App {
                 .environmentObject(appDelegate.container.rules)
                 .environmentObject(appDelegate.container.pending)
                 .environmentObject(appDelegate.container.log)
+                .environmentObject(appDelegate.container.notifications)
                 .environmentObject(appDelegate.container.coordinator)
                 .environmentObject(appDelegate.container.server)
         }

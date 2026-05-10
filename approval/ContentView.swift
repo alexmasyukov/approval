@@ -11,7 +11,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @EnvironmentObject var coordinator: ApprovalCoordinator
+    @EnvironmentObject var notifications: NotificationClient
 
     @State private var selection: AppSection? = .status
 
@@ -37,7 +37,7 @@ struct ContentView: View {
         .navigationSplitViewStyle(.balanced)
         .frame(minWidth: 820, minHeight: 560)
         .onAppear {
-            coordinator.refreshAuthStatus()
+            notifications.refreshAuthStatus()
         }
     }
 }

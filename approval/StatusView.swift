@@ -7,6 +7,7 @@ import SwiftUI
 
 struct StatusView: View {
     @EnvironmentObject var coordinator: ApprovalCoordinator
+    @EnvironmentObject var notifications: NotificationClient
     @EnvironmentObject var server: ApprovalServer
     @EnvironmentObject var pending: PendingStore
     @EnvironmentObject var store: RulesStore
@@ -37,11 +38,11 @@ struct StatusView: View {
             modeSection
 
             Section("Уведомления MacOS") {
-                LabeledContent("Статус", value: coordinator.authStatus)
-                Button("Обновить статус") { coordinator.refreshAuthStatus() }
-                Button("Открыть настройки уведомлений") { coordinator.openNotificationSettings() }
-                if !coordinator.lastError.isEmpty {
-                    Text(coordinator.lastError)
+                LabeledContent("Статус", value: notifications.authStatus)
+                Button("Обновить статус") { notifications.refreshAuthStatus() }
+                Button("Открыть настройки уведомлений") { notifications.openSystemSettings() }
+                if !notifications.lastError.isEmpty {
+                    Text(notifications.lastError)
                         .font(.callout)
                         .foregroundStyle(.red)
                 }
