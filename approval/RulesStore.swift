@@ -8,8 +8,6 @@ import Combine
 
 @MainActor
 final class RulesStore: ObservableObject {
-    static let shared = RulesStore()
-
     @Published var config: RulesConfig
 
     private let fileURL: URL

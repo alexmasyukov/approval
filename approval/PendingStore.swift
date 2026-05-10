@@ -8,8 +8,6 @@ import Combine
 
 @MainActor
 final class PendingStore: ObservableObject {
-    static let shared = PendingStore()
-
     struct Entry {
         let command: PendingCommand
         let onResolve: (Bool) -> Void

@@ -11,13 +11,19 @@ import Combine
 
 @MainActor
 final class ApprovalCoordinator: NSObject, ObservableObject {
-    static let shared = ApprovalCoordinator()
-
     @Published var lastResult: String = "—"
     @Published var lastError: String = ""
     @Published var authStatus: String = "не запрошено"
 
+    private let pending: PendingStore
+    private let log: LogStore
     private var detailWindows: [String: NSWindow] = [:]
+
+    init(pending: PendingStore, log: LogStore) {
+        self.pending = pending
+        self.log = log
+        super.init()
+    }
 
     func setup() {
         let center = UNUserNotificationCenter.current()
@@ -97,8 +103,8 @@ final class ApprovalCoordinator: NSObject, ObservableObject {
 
     func resolve(id: String, approved: Bool) {
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [id])
-        PendingStore.shared.resolve(id: id, approved: approved)
-        LogStore.shared.updateDecision(id: id, decision: approved ? .approved : .denied)
+        pending.resolve(id: id, approved: approved)
+        log.updateDecision(id: id, decision: approved ? .approved : .denied)
         if let w = detailWindows[id] {
             detailWindows.removeValue(forKey: id)
             w.close()

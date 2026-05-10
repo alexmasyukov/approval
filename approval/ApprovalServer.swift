@@ -11,22 +11,41 @@ import Foundation
 import Darwin
 import Combine
 
+/// Запрос от хука. Объявлен как Sendable struct, чтобы безопасно
+/// переходить с background thread на MainActor.
+struct CheckRequest: Decodable, Sendable {
+    let command: String
+    let cwd: String?
+    let source: String?
+}
+
 @MainActor
 final class ApprovalServer: ObservableObject {
-    static let shared = ApprovalServer()
-
     @Published private(set) var isRunning: Bool = false
     @Published private(set) var lastError: String = ""
+
+    private let rules: RulesStore
+    private let pending: PendingStore
+    private let log: LogStore
+    private let coordinator: ApprovalCoordinator
 
     private var serverFd: Int32 = -1
     private var acceptThread: Thread?
 
     var socketPath: String { UnixSocket.socketPath }
 
+    init(rules: RulesStore, pending: PendingStore, log: LogStore, coordinator: ApprovalCoordinator) {
+        self.rules = rules
+        self.pending = pending
+        self.log = log
+        self.coordinator = coordinator
+    }
+
+    // MARK: - Start / stop
+
     func start() {
         guard !isRunning else { return }
 
-        // Удалить старый сокет-файл если остался от прошлого запуска.
         unlink(socketPath)
 
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
@@ -47,7 +66,6 @@ final class ApprovalServer: ObservableObject {
             return
         }
 
-        // Только владелец может читать/писать в сокет.
         chmod(socketPath, 0o600)
 
         guard listen(fd, 32) == 0 else {
@@ -62,10 +80,11 @@ final class ApprovalServer: ObservableObject {
         lastError = ""
         print("ApprovalServer listening on \(socketPath)")
 
-        // Захватываем fd в замыкание — потоку не нужно лезть обратно в actor.
+        // Захват self и fd в замыкание accept-loop потока.
+        let server = self
         let capturedFd = fd
         let thread = Thread {
-            Self.acceptLoop(serverFd: capturedFd)
+            ApprovalServer.acceptLoop(server: server, serverFd: capturedFd)
         }
         thread.name = "approval-server-accept"
         thread.start()
@@ -81,104 +100,98 @@ final class ApprovalServer: ObservableObject {
         unlink(socketPath)
     }
 
-    // MARK: - Accept loop (background thread)
+    // MARK: - Accept loop / per-connection handler (background)
 
-    nonisolated private static func acceptLoop(serverFd: Int32) {
+    nonisolated private static func acceptLoop(server: ApprovalServer, serverFd: Int32) {
         while true {
             let clientFd = accept(serverFd, nil, nil)
             if clientFd < 0 {
                 if errno == EBADF || errno == EINVAL {
-                    break // listening fd закрыт — выходим
+                    break
                 }
                 continue
             }
-
             DispatchQueue.global(qos: .userInitiated).async {
-                Self.handleClient(fd: clientFd)
+                ApprovalServer.handleClient(server: server, fd: clientFd)
             }
         }
     }
 
-    // MARK: - Client handling (background thread)
-
-    nonisolated private static func handleClient(fd: Int32) {
-        defer {
-            // fd закроется либо тут (если ошибка), либо после ответа в sendResponse.
-        }
-
+    nonisolated private static func handleClient(server: ApprovalServer, fd: Int32) {
         guard let data = UnixSocket.readLine(fd: fd) else {
             close(fd)
             return
         }
 
-        struct Req: Decodable {
-            let command: String
-            let cwd: String?
-            let source: String?
-        }
-        guard let req = try? JSONDecoder().decode(Req.self, from: data) else {
+        guard let req = try? JSONDecoder().decode(CheckRequest.self, from: data) else {
             sendResponse(fd: fd, approved: false, reason: "bad json")
             return
         }
 
         Task { @MainActor in
-            let store = RulesStore.shared
-            if store.config.mode == .passThrough {
-                Self.sendResponse(fd: fd, approved: true, reason: "pass-through mode")
-                return
-            }
-            guard let matched = store.evaluate(command: req.command) else {
-                Self.sendResponse(fd: fd, approved: true, reason: "no rule matched")
-                return
-            }
-
-            let id = UUID().uuidString
-            let detailReason = """
-            Совпадение с правилом: \(matched.name)
-            Паттерн: \(matched.pattern)
-
-            Рабочая директория: \(req.cwd ?? "—")
-            """
-            let cmd = PendingCommand(
-                id: id,
-                source: req.source ?? IPCProtocol.defaultSource,
-                command: req.command,
-                reason: detailReason
-            )
-
-            LogStore.shared.append(LogEntry(
-                id: id,
-                timestamp: Date(),
-                command: req.command,
-                source: req.source ?? IPCProtocol.defaultSource,
-                cwd: req.cwd,
-                ruleName: matched.name,
-                rulePattern: matched.pattern,
-                decision: .pending,
-                resolvedAt: nil
-            ))
-
-            // Server-side таймаут: если юзер не среагировал за время чуть
-            // больше hook-таймаута — авто-deny, чтобы не плодить заклинившие
-            // pending-записи.
-            let serverTimeout = TimeInterval(IPCProtocol.hookTimeoutSeconds + 60)
-            let timeoutWork = DispatchWorkItem {
-                PendingStore.shared.resolve(id: id, approved: false)
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + serverTimeout, execute: timeoutWork)
-
-            PendingStore.shared.add(cmd) { approved in
-                timeoutWork.cancel()
-                Self.sendResponse(
-                    fd: fd,
-                    approved: approved,
-                    reason: approved ? "user approved" : "user denied"
-                )
-            }
-
-            ApprovalCoordinator.shared.requestApproval(for: cmd)
+            server.processCheck(req: req, fd: fd)
         }
     }
+
+    // MARK: - Main-actor request processing
+
+    private func processCheck(req: CheckRequest, fd: Int32) {
+        if rules.config.mode == .passThrough {
+            Self.sendResponse(fd: fd, approved: true, reason: "pass-through mode")
+            return
+        }
+
+        guard let matched = rules.evaluate(command: req.command) else {
+            Self.sendResponse(fd: fd, approved: true, reason: "no rule matched")
+            return
+        }
+
+        let id = UUID().uuidString
+        let detailReason = """
+        Совпадение с правилом: \(matched.name)
+        Паттерн: \(matched.pattern)
+
+        Рабочая директория: \(req.cwd ?? "—")
+        """
+        let cmd = PendingCommand(
+            id: id,
+            source: req.source ?? IPCProtocol.defaultSource,
+            command: req.command,
+            reason: detailReason
+        )
+
+        log.append(LogEntry(
+            id: id,
+            timestamp: Date(),
+            command: req.command,
+            source: req.source ?? IPCProtocol.defaultSource,
+            cwd: req.cwd,
+            ruleName: matched.name,
+            rulePattern: matched.pattern,
+            decision: .pending,
+            resolvedAt: nil
+        ))
+
+        let serverTimeout = TimeInterval(IPCProtocol.hookTimeoutSeconds + 60)
+        let pendingRef = pending
+        let timeoutWork = DispatchWorkItem {
+            pendingRef.resolve(id: id, approved: false)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + serverTimeout, execute: timeoutWork)
+
+        pending.add(cmd) { approved in
+            timeoutWork.cancel()
+            Self.sendResponse(
+                fd: fd,
+                approved: approved,
+                reason: approved ? "user approved" : "user denied"
+            )
+        }
+
+        coordinator.requestApproval(for: cmd)
+    }
+
+    // MARK: -
 
     nonisolated private static func sendResponse(fd: Int32, approved: Bool, reason: String) {
         let payload: [String: Any] = ["approved": approved, "reason": reason]

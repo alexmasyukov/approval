@@ -36,8 +36,6 @@ struct LogEntry: Identifiable, Codable, Equatable {
 
 @MainActor
 final class LogStore: ObservableObject {
-    static let shared = LogStore()
-
     @Published private(set) var entries: [LogEntry] = []
 
     private let fileURL: URL
