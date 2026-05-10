@@ -33,7 +33,9 @@ final class NotificationClient: NSObject, ObservableObject {
     func setup() {
         let center = UNUserNotificationCenter.current()
         center.delegate = self
-        center.requestAuthorization(options: [.alert, .sound, .badge]) { [weak self] granted, error in
+        // .timeSensitive — иначе macOS даунгрейдит interruptionLevel
+        // до .active и нотификация может задерживаться Focus-режимом.
+        center.requestAuthorization(options: [.alert, .sound, .badge, .timeSensitive]) { [weak self] granted, error in
             DispatchQueue.main.async {
                 if let error = error {
                     self?.lastError = "Ошибка авторизации: \(error.localizedDescription)"
