@@ -38,7 +38,7 @@ struct ContentView: View {
                 Label(section.rawValue, systemImage: section.icon)
             }
             .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
+            .navigationSplitViewColumnWidth(200)
             .navigationTitle("approval")
         } detail: {
             Group {
@@ -50,8 +50,8 @@ struct ContentView: View {
                 case .general: GeneralSettingsView()
                 }
             }
-            .navigationSplitViewColumnWidth(min: 520, ideal: 720)
         }
+        .navigationSplitViewStyle(.balanced)
         .frame(minWidth: 820, minHeight: 560)
         .onAppear {
             coordinator.refreshAuthStatus()
@@ -129,7 +129,7 @@ struct StatusView: View {
                 }
             }
 
-            Section("Тест") {
+            Section("Тестирование оповещений") {
                 Button("Тест: DROP TABLE users") {
                     fireLocal(command: "DROP TABLE users; DROP TABLE orders;")
                 }

@@ -22,18 +22,6 @@ struct LogView: View {
                 .disabled(log.entries.isEmpty)
             }
 
-            Section("История запросов") {
-                if log.entries.isEmpty {
-                    Text("пока пусто — здесь появятся команды, попавшие под фильтр")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(log.entries) { entry in
-                        logRow(entry)
-                    }
-                }
-            }
-
             Section("Файл") {
                 LabeledContent("Путь") {
                     Text(log.logFilePath)
@@ -44,6 +32,18 @@ struct LogView: View {
                 Button("Открыть папку") {
                     let url = URL(fileURLWithPath: log.logFilePath)
                     NSWorkspace.shared.activateFileViewerSelecting([url])
+                }
+            }
+
+            Section("История запросов") {
+                if log.entries.isEmpty {
+                    Text("пока пусто — здесь появятся команды, попавшие под фильтр")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(log.entries) { entry in
+                        logRow(entry)
+                    }
                 }
             }
         }
