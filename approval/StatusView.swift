@@ -51,8 +51,7 @@ struct StatusView: View {
                 }
             }
 
-            #if DEBUG
-            Section(l10n.tr("status.section.test") + " (DEBUG)") {
+            Section(l10n.tr("status.section.test")) {
                 Button(l10n.tr("status.test.drop")) {
                     fireLocal(command: "DROP TABLE users; DROP TABLE orders;")
                 }
@@ -63,7 +62,6 @@ struct StatusView: View {
                     fireLocal(command: "SELECT * FROM users LIMIT 10")
                 }
             }
-            #endif
         }
         .formStyle(.grouped)
         .navigationTitle(l10n.tr("status.title"))
